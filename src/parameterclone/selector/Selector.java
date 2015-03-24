@@ -29,6 +29,8 @@ import beast.core.Description;
 import beast.core.Function;
 import beast.core.Input;
 import beast.core.Input.Validate;
+import beast.core.parameter.IntegerParameter;
+import beast.core.parameter.RealParameter;
 import beast.core.Loggable;
 
 @Description("A calculation node that propagates one parameter from a vector of parameters")
@@ -39,13 +41,13 @@ public class Selector extends CalculationNode implements Loggable, Function {
 	final public Input<Integer> entryInput = new Input<Integer>("entry",
 			"The index of the parameter vector that this object propagates",
 			Validate.REQUIRED);
-	public Input<List<Double>> parameters = new Input<List<Double>>(
+	public Input<List<RealParameter>> parametersInput = new Input<List<RealParameter>>(
 			"parameters",
 			"individual parameters that the actual value is chosen from",
-			new ArrayList<Double>(), Validate.REQUIRED);
-	public Input<List<Integer>> groupingsInput = new Input<List<Integer>>(
+			new ArrayList<>(), Validate.REQUIRED);
+	public Input<List<IntegerParameter>> groupingsInput = new Input<List<IntegerParameter>>(
 			"groupings", "parameter selection indices",
-			new ArrayList<Integer>(), Validate.REQUIRED);
+			new ArrayList<>(), Validate.REQUIRED);
 
 	// Member objects
 	Integer entry;
@@ -55,24 +57,24 @@ public class Selector extends CalculationNode implements Loggable, Function {
 
 	@Override
 	public void initAndValidate() throws Exception {
-		maxIndex = parameters.get().size();
+		maxIndex = parametersInput.get().size();
 		entry = entryInput.get();
 		if (entry > groupingsInput.get().size()) {
 			throw new Exception("entry must be valid index of groupings");
 		}
-		for (Integer group : groupingsInput.get()) {
-			if (group >= maxIndex) {
+		for (IntegerParameter group : groupingsInput.get()) {
+			if (group.getValue() >= maxIndex) {
 				throw new Exception(
 						"All entries in groupings must be valid indices of parameters");
 			}
 		}
-		value = parameters.get().get(groupingsInput.get().get(entry));
+		value = parametersInput.get().get(groupingsInput.get().get(entry).getValue()).getValue();
 	}
 
 	@Override
 	public boolean requiresRecalculation() {
-		// parameters[groupings[entry]], but with Inputs and Lists
-		value = parameters.get().get(groupingsInput.get().get(entry));
+		// Essentially parameters[groupings[entry]], but wrapped as Inputs, Parameters and Lists
+		value = parametersInput.get().get(groupingsInput.get().get(entry).getValue()).getValue();
 		// Yes, this means we do the 'calculation' here in the check, but
 		// it probably means avoiding other recalculations down the line.
 		return storedValue != value;

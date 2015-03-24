@@ -22,12 +22,15 @@ package parameterclone.splitandmerge;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Vector;
+import java.util.List;
 
 import beast.core.Citation;
 import beast.core.Description;
 import beast.core.Input;
+import beast.core.Input.Validate;
 import beast.core.Operator;
+import beast.core.parameter.IntegerParameter;
+import beast.core.parameter.RealParameter;
 import beast.math.Binomial;
 import beast.util.Randomizer;
 
@@ -36,28 +39,33 @@ import beast.util.Randomizer;
 		+" Bayesian Analysis of Correlated Evolution of Discrete Characters"
 		+" by Reversible-Jump Markov Chain Monte Carlo."
 		+" The American Naturalist 167, 808--825. doi:10.1086/503444")
-public class MergeOperator<T extends Double> extends Operator {
+public class MergeOperator extends Operator {
 	// Inputs that are changed by the operator
-	public Vector<Input<Integer>> groupings =
-			new Vector<Input<Integer>>();//groupings -- A vector assigning parameter array indices to entries
-	public Vector<Input<T>> parameters =
-			new Vector<Input<T>>();//parameters -- A vector of connected input parameters
+	public Input<List<RealParameter>> parametersInput = new Input<List<RealParameter>>(
+			"parameters",
+			"individual parameters that the actual value is chosen from",
+			new ArrayList<>(), Validate.REQUIRED);
+	public Input<List<IntegerParameter>> groupingsInput = new Input<List<IntegerParameter>>(
+			"groupings", "parameter selection indices",
+			new ArrayList<>(), Validate.REQUIRED);
 
 	Integer k;
+	Integer maxIndex;
 
 	@Override
 	public void initAndValidate() throws Exception {
-		k = parameters.size();
-		for (Input<Integer> value : groupings) {
-			if (value.get() >= k) {
-				throw new Exception("All entries in groupings must be valid indices of parameters.");
+		k = groupingsInput.get().size();
+		maxIndex = parametersInput.get().size();
+		for (IntegerParameter group : groupingsInput.get()) {
+			if (group.getValue() >= maxIndex) {
+				throw new Exception(
+						"All entries in groupings must be valid indices of parameters");
 			}
 		}
-
 	}
 
     /**
-     * Change the parameter and return the log of the Hastings ratio.
+     * Change the parameter and return the log of the Hastings ratio:
      * Merge two groups of joined parameters, averaging the parameter.
      */
 	@Override
@@ -69,8 +77,8 @@ public class MergeOperator<T extends Double> extends Operator {
 		ArrayList<Integer> groupIndices = new ArrayList<>(); // Keys of groups
 		HashSet<Integer> indicesOccuringAtLeastTwice = new HashSet<>(); //large groups
 		
-		for (Integer index = 0; index <= groupings.size(); ++index) {
-			Integer value = groupings.get(index).get();
+		for (Integer index = 0; index <= groupingsInput.get().size(); ++index) {
+			Integer value = groupingsInput.get().get(index).getValue();
 			if (groups.get(value) != null) {
 				if (groups.containsKey(value)) {
 					indicesOccuringAtLeastTwice.add(value);
@@ -100,16 +108,19 @@ public class MergeOperator<T extends Double> extends Operator {
 		Integer mergeGroupSize = mergeGroup.size();
 		Integer removeGroupSize = removeGroup.size();
 				
-		double /*FIXME: How can we make this 'T'?*/ newValue = (parameters.get(mergeIndex).get(this) * mergeGroupSize
-				+ parameters.get(removeIndex).get(this) * removeGroupSize)/
+		double newValue = (parametersInput.get(this).get(mergeIndex).getArrayValue() * mergeGroupSize
+				+ parametersInput.get(this).get(removeIndex).getArrayValue() * removeGroupSize)/
 				(mergeGroupSize+removeGroupSize);
 		
 		// Generate the MERGE
+		
+		parametersInput.get(this).get(mergeIndex).setValue(newValue);
 		for (Integer toBeMerged : removeGroup) {
-			groupings.get(toBeMerged).setValue(mergeIndex, this);
+			// groupings[toBeMerged] = mergeIndex
+			groupingsInput.get(this).get(toBeMerged).setValue(mergeIndex);			
 		}
 		
-		parameters.get(mergeIndex).setValue(newValue, this);
+		parametersInput.setValue(newValue, this);
 		
 		// Now we calculate the Hastings ratio.
 
@@ -148,7 +159,7 @@ public class MergeOperator<T extends Double> extends Operator {
 				- Math.log(Math.pow(2, mergeGroupSize+removeGroupSize-1)-1)
 				- Math.log(
 						// TODO: Understand how the rate plays a role here
-						// parameters.get(groupToBeSplit).get(this) *
+						parametersInput.get().get(mergeIndex).getValue() *
 						(mergeGroupSize+removeGroupSize)) 
 				- logMergeProbability + Binomial.logChoose(k, 2);
 	}
