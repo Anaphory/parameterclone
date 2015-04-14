@@ -20,8 +20,6 @@
 package parameterclone.selector;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.List;
 
 import beast.core.CalculationNode;
 import beast.core.Citation;
@@ -29,6 +27,7 @@ import beast.core.Description;
 import beast.core.Function;
 import beast.core.Input;
 import beast.core.Input.Validate;
+import beast.core.parameter.BooleanParameter;
 import beast.core.parameter.IntegerParameter;
 import beast.core.parameter.RealParameter;
 import beast.core.Loggable;
@@ -41,13 +40,16 @@ public class Selector extends CalculationNode implements Loggable, Function {
 	final public Input<Integer> entryInput = new Input<Integer>("entry",
 			"The index of the parameter vector that this object propagates",
 			Validate.REQUIRED);
-	public Input<List<RealParameter>> parametersInput = new Input<List<RealParameter>>(
+	public Input<RealParameter> parametersInput = new Input<RealParameter>(
 			"parameters",
 			"individual parameters that the actual value is chosen from",
-			new ArrayList<>(), Validate.REQUIRED);
-	public Input<List<IntegerParameter>> groupingsInput = new Input<List<IntegerParameter>>(
+			new RealParameter(), Validate.REQUIRED);
+	public Input<IntegerParameter> groupingsInput = new Input<IntegerParameter>(
 			"groupings", "parameter selection indices",
-			new ArrayList<>(), Validate.REQUIRED);
+			new IntegerParameter(), Validate.REQUIRED);
+	public Input<BooleanParameter> parameterIsUsed = new Input<BooleanParameter>(
+			"parameterIsUsed", "stores whether the corresponding element of parameters is active",
+			Validate.REQUIRED);
 
 	// Member objects
 	Integer entry;
@@ -57,24 +59,28 @@ public class Selector extends CalculationNode implements Loggable, Function {
 
 	@Override
 	public void initAndValidate() throws Exception {
-		maxIndex = parametersInput.get().size();
+		maxIndex = parametersInput.get().getDimension();
 		entry = entryInput.get();
-		if (entry > groupingsInput.get().size()) {
+		if (entry > groupingsInput.get().getDimension()) {
 			throw new Exception("entry must be valid index of groupings");
 		}
-		for (IntegerParameter group : groupingsInput.get()) {
-			if (group.getValue() >= maxIndex) {
+		// Array-like RealParameters do not implement java.lang.iterable, so we must do the iteration by hand.
+		for (int groupIndex = groupingsInput.get().getDimension() - 1; groupIndex >= 0; --groupIndex) {
+			if (groupingsInput.get().getNativeValue(groupIndex) >= maxIndex) {
 				throw new Exception(
 						"All entries in groupings must be valid indices of parameters");
 			}
 		}
-		value = parametersInput.get().get(groupingsInput.get().get(entry).getValue()).getValue();
+		// value = parametersInput[groupingsInput[entry]]
+		Integer index = groupingsInput.get().getNativeValue(entry);
+		parameterIsUsed.get().setValue(index, true);				
+		value = parametersInput.get().getValue(index);
 	}
 
 	@Override
 	public boolean requiresRecalculation() {
 		// Essentially parameters[groupings[entry]], but wrapped as Inputs, Parameters and Lists
-		value = parametersInput.get().get(groupingsInput.get().get(entry).getValue()).getValue();
+		value = parametersInput.get().getValue(groupingsInput.get().getNativeValue(entry));
 		// Yes, this means we do the 'calculation' here in the check, but
 		// it probably means avoiding other recalculations down the line.
 		return storedValue != value;

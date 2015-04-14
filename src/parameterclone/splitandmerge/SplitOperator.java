@@ -21,13 +21,13 @@ package parameterclone.splitandmerge;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 
 import beast.core.Citation;
 import beast.core.Description;
 import beast.core.Input;
 import beast.core.Input.Validate;
 import beast.core.Operator;
+import beast.core.parameter.BooleanParameter;
 import beast.core.parameter.IntegerParameter;
 import beast.core.parameter.RealParameter;
 import beast.math.Binomial;
@@ -40,26 +40,34 @@ import beast.util.Randomizer;
 		+" The American Naturalist 167, 808--825. doi:10.1086/503444")
 public class SplitOperator extends Operator {
 	// Inputs that are changed by the operator
-	public Input<List<RealParameter>> parametersInput = new Input<List<RealParameter>>(
+	public Input<RealParameter> parametersInput = new Input<RealParameter>(
 			"parameters",
 			"individual parameters that the actual value is chosen from",
-			new ArrayList<>(), Validate.REQUIRED);
-	public Input<List<IntegerParameter>> groupingsInput = new Input<List<IntegerParameter>>(
+			new RealParameter(), Validate.REQUIRED);
+	public Input<IntegerParameter> groupingsInput = new Input<IntegerParameter>(
 			"groupings", "parameter selection indices",
-			new ArrayList<>(), Validate.REQUIRED);
+			new IntegerParameter(), Validate.REQUIRED);
+	public Input<BooleanParameter> parameterIsUsed = new Input<BooleanParameter>(
+			"parameterIsUsed", "stores whether the corresponding element of parameters is active",
+			Validate.REQUIRED);
 
 	Integer k;
 	Integer maxIndex;
 
 	@Override
 	public void initAndValidate() throws Exception {
-		k = groupingsInput.get().size();
-		maxIndex = parametersInput.get().size();
-		for (IntegerParameter group : groupingsInput.get()) {
-			if (group.getValue() >= maxIndex) {
+		k = groupingsInput.get().getDimension();
+		maxIndex = parametersInput.get().getDimension();
+		// RealParameter does not implement java.lang.iterable, so we must do the iteration by hand.
+		for (int groupIndex = groupingsInput.get().getDimension() - 1; groupIndex >= 0; --groupIndex) {
+			if (groupingsInput.get().getNativeValue(groupIndex) >= maxIndex) {
 				throw new Exception(
 						"All entries in groupings must be valid indices of parameters");
 			}
+		}
+		if (parameterIsUsed.get().getDimension() != parametersInput.get().getDimension()) {
+			throw new Exception(
+					"parameterIsUsed must correspond to parameters in dimension");
 		}
 	}
 
@@ -72,8 +80,8 @@ public class SplitOperator extends Operator {
 		// Find the composition of groups, in particular which ones can be split.
 		HashMap<Integer, ArrayList<Integer>> groups = new HashMap<Integer, ArrayList<Integer>>();
 		ArrayList<Integer> groupsOfSizeAtLeastTwo = new ArrayList<Integer>();
-		for (Integer index = 0; index <= groupingsInput.get().size(); ++index) {
-			Integer value = groupingsInput.get().get(index).getValue();
+		for (Integer index = groupingsInput.get().getDimension() - 1; index >= 0;  --index) {
+			Integer value = groupingsInput.get().getNativeValue(index);
 			if (groups.get(value) != null) {
 				if (!groupsOfSizeAtLeastTwo.contains(value)) {
 					groupsOfSizeAtLeastTwo.add(value);
@@ -92,10 +100,21 @@ public class SplitOperator extends Operator {
 			return Double.NEGATIVE_INFINITY;
 		}
 		
+		// Generate the parameter index for the new group
+		Integer newIndex = null;
+		for (Integer index = parametersInput.get().getDimension() - 1; index >= 0; --index) {
+			// Check the available indices from high to low:
+		    if (! parameterIsUsed.get().getValue(index)) {
+		    	// use the first available index encountered
+		    	newIndex = index;
+		    	break;
+		    }
+		}
+		if (newIndex == null) {
+			return Double.NEGATIVE_INFINITY;
+		}
+		
 		// Generate the SPLIT
-		Integer newIndex = parametersInput.get().size();
-		// TODO: Some cleanup so this won't lead to a memory explosion 
-
 		Integer groupToBeSplit = groupsOfSizeAtLeastTwo.get(Randomizer.nextInt(nM));
 		
 		ArrayList<Integer> oldGroup = groups.get(groupToBeSplit);
@@ -103,17 +122,17 @@ public class SplitOperator extends Operator {
 		
 		// Moving an entry from one group to another means changing the corresponding value in groupings.
 		// At least one value has to move, so remove it from the oldGroup to not hit it twice.
-		groupingsInput.get(this).get(oldGroup.remove((int) firstInNewGroup)).setValue(newIndex);
-		// If we do not convert to (int), it tries to remove an element of that value,
+		groupingsInput.get(this).setValue(oldGroup.remove((int) firstInNewGroup), newIndex);
+		// If we do not convert to "(int)", it tries to remove an element of that value,
 		// as per the alternative definition of remove(Object O)
 		
 		Integer newGroupSize = 1;
 		Integer oldGroupSize = oldGroup.size();
 		
 		// Go through the old list from the end, and either move or keep entries.
-		for (int index = oldGroup.size()-1; index > 0; --index) {
+		for (int index = oldGroup.size() - 1; index >= 0; --index) {
 			if (Randomizer.nextBoolean()) {
-				groupingsInput.get(this).get(oldGroup.remove((int) index)).setValue(newIndex);
+				groupingsInput.get(this).setValue(oldGroup.remove((int) index), newIndex);
 				++newGroupSize;
 				--oldGroupSize;
 			}
@@ -123,9 +142,8 @@ public class SplitOperator extends Operator {
 		//  * Calling an appropriate Operator
 		//  * Implementing the change here
 		//  * Making sure that it works without that step
-		parametersInput.get(this).add(new RealParameter());
-		parametersInput.get(this).get(newIndex).setValue(
-				parametersInput.get(this).get(groupToBeSplit).getValue());
+		parametersInput.get(this).setValue(newIndex,
+				parametersInput.get(this).getValue(groupToBeSplit));
 				
 		// If only a split can happen, it has probability 1.
 		double logSplitProbability = 0;
@@ -151,7 +169,7 @@ public class SplitOperator extends Operator {
 				+ Math.log(Math.pow(2, newGroupSize+oldGroupSize-1)-1)
 				+ Math.log(
 						// TODO: Understand how the rate plays a role here
-						parametersInput.get().get(groupToBeSplit).getValue() *
+						parametersInput.get().getValue(groupToBeSplit) *
 						(newGroupSize+oldGroupSize));
 	}
 }
