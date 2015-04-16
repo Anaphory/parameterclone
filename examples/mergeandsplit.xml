@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<beast version='2.0'
+	namespace="beast.core:beast.core.parameter:beast.math.distributions:beast.evolution.operators:parameterclone.splitandmerge">
+	<run chainLength="10000" id="mcmc" preBurnin="50" spec="MCMC">
+		<state id="state" storeEvery="100">
+			<input name="stateNode">
+				<parameter estimate="false" id="parameters" lower="1.0"
+					upper="5.0">
+					1.5 1.5 1.5 1.5
+					</parameter>
+			</input>
+			<stateNode spec="IntegerParameter" estimate="false" id="indices"
+					lower="0" upper="10">
+					0 1 2 3
+					</stateNode>
+			<stateNode spec="BooleanParameter" estimate="false" id="active">
+			true true true true
+			</stateNode>
+		</state>
+		
+		<distribution spec="Prior" x="@parameters">
+			<distr spec="Uniform" lower="1.0" upper="5.0"></distr>
+		</distribution>
+
+		<operator id="Scaler" spec="ScaleOperator" scaleFactor="0.25"
+			weight="5">
+			<parameter idref="parameters" />
+		</operator>
+
+		<logger logEvery="100">
+			<log idref="parameters"></log>
+			<log idref="indices"></log>
+		</logger>
+	</run>
+</beast>
