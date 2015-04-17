@@ -81,114 +81,113 @@ public class MergeOperator extends Operator {
 	@Override
 	public double proposal() {
 
-		try {
+		// Find the composition of groups
 
-			// Find the composition of groups
+		// For each grouping value, the corresponding indices of groupings
+		HashMap<Integer, HashSet<Integer>> groups = new HashMap<>();
+		ArrayList<Integer> groupIndices = new ArrayList<>(); // Keys of
+																// groups
+		HashSet<Integer> indicesOccuringAtLeastTwice = new HashSet<>(); // large
+																		// groups
 
-			// For each grouping value, the corresponding indices of groupings
-			HashMap<Integer, HashSet<Integer>> groups = new HashMap<>();
-			ArrayList<Integer> groupIndices = new ArrayList<>(); // Keys of
-																	// groups
-			HashSet<Integer> indicesOccuringAtLeastTwice = new HashSet<>(); // large
-																			// groups
-
-			for (Integer index = groupingsInput.get().getDimension() - 1; index >= 0; --index) {
-				Integer value = groupingsInput.get().getNativeValue(index);
-				if (groups.get(value) != null) {
-					if (groups.containsKey(value)) {
-						indicesOccuringAtLeastTwice.add(value);
-					}
-				} else {
-					groupIndices.add(value);
-					HashSet<Integer> newGroup = new HashSet<>();
-					groups.put(value, newGroup);
+		for (Integer index = groupingsInput.get().getDimension() - 1; index >= 0; --index) {
+			Integer value = groupingsInput.get().getNativeValue(index);
+			if (groups.get(value) != null) {
+				if (groups.containsKey(value)) {
+					indicesOccuringAtLeastTwice.add(value);
 				}
-				groups.get(value).add(index);
+			} else {
+				groupIndices.add(value);
+				HashSet<Integer> newGroup = new HashSet<>();
+				groups.put(value, newGroup);
 			}
+			groups.get(value).add(index);
+		}
 
-			Integer nGroups = groupIndices.size();
-
-			Integer rawMergeIndex = Randomizer.nextInt(nGroups);
-			Integer rawRemoveIndex = Randomizer.nextInt(nGroups - 1);
-			if (rawRemoveIndex >= rawMergeIndex) {
-				++rawRemoveIndex;
-			}
-			Integer mergeIndex = groupIndices.get(Randomizer.nextInt(nGroups));
-			Integer removeIndex = groupIndices.get(Randomizer.nextInt(nGroups));
-
-			HashSet<Integer> mergeGroup = groups.get(mergeIndex);
-			HashSet<Integer> removeGroup = groups.get(removeIndex);
-
-			Integer mergeGroupSize = mergeGroup.size();
-			Integer removeGroupSize = removeGroup.size();
-
-			double newValue = (parametersInput.get(this).getValue(mergeIndex)
-					* mergeGroupSize + parametersInput.get(this).getValue(
-					removeIndex)
-					* removeGroupSize)
-					/ (mergeGroupSize + removeGroupSize);
-
-			// Generate the MERGE
-
-			parametersInput.get(this).setValue(mergeIndex, newValue);
-			for (Integer toBeMerged : removeGroup) {
-				// groupings[toBeMerged] = mergeIndex
-				groupingsInput.get(this).setValue(toBeMerged, mergeIndex);
-			}
-			parameterIsUsed.get(this).setValue(removeIndex, false);
-
-			// Now we calculate the Hastings ratio.
-
-			Integer groupsOfSizeAtLeastTwo = indicesOccuringAtLeastTwice.size();
-
-			// If only a merge can happen, it has probability 1.
-			double logMergeProbability = 0;
-			// If splitting and merging can both happen, the merge probability
-			// is 1/2.
-			// Splitting can happen if
-			if (groupsOfSizeAtLeastTwo != 0) {
-				logMergeProbability = Math.log(0.5);
-			}
-
-			// If we merged two groups of size one, we gain a group of size at
-			// least two.
-			if (mergeGroupSize == 1 && removeGroupSize == 1) {
-				++groupsOfSizeAtLeastTwo;
-			}
-			// If we merged two groups of size at least two, we lose one in
-			// number.
-			if (mergeGroupSize >= 2 && removeGroupSize >= 2) {
-				--groupsOfSizeAtLeastTwo;
-			}
-
-			// If, after this, only a split can happen, that split has
-			// probability 1.
-			double logSplitProbability = 0;
-			// If splitting and merging will both be options, the split
-			// probability is 1/2.
-			// This is not the case if we merged the last two groups.
-			if (nGroups != 2) {
-				logSplitProbability = Math.log(0.5);
-			}
-
-			// The proposal ratio for for a merge move is
-			// [ P_s(M') 1/N(M') 1/(2^(n'_i+n'_j-1)-1) 1/(q' (n'_i+n'_j)) ]/[
-			// P_m(M) 1/(k nCr 2) ]
-
-			return logSplitProbability
-					- Math.log(groupsOfSizeAtLeastTwo)
-					- Math.log(Math
-							.pow(2, mergeGroupSize + removeGroupSize - 1) - 1)
-					- Math.log(
-					// TODO: Understand how the rate plays a role here
-					parametersInput.get().getValue(mergeIndex)
-							* (mergeGroupSize + removeGroupSize))
-					- logMergeProbability + Binomial.logChoose(k, 2);
-
-		} catch (Exception e) {
-			// whatever went wrong, we want to abort this operation...
+		Integer nGroups = groupIndices.size();
+		if (nGroups <= 1) {
+			//System.out.printf("Merge -- only one group\n");
 			return Double.NEGATIVE_INFINITY;
 		}
+
+		Integer rawMergeIndex = Randomizer.nextInt(nGroups);
+		Integer rawRemoveIndex = Randomizer.nextInt(nGroups - 1);
+		if (rawRemoveIndex >= rawMergeIndex) {
+			++rawRemoveIndex;
+		}
+		Integer mergeIndex = groupIndices.get(rawMergeIndex);
+		// Make sure that the other group is different
+		Integer removeIndex = groupIndices.get(rawRemoveIndex);
+
+		HashSet<Integer> mergeGroup = groups.get(mergeIndex);
+		HashSet<Integer> removeGroup = groups.get(removeIndex);
+
+		Integer mergeGroupSize = mergeGroup.size();
+		Integer removeGroupSize = removeGroup.size();
+
+		double newValue = (parametersInput.get(this).getValue(mergeIndex)
+				* mergeGroupSize + parametersInput.get(this).getValue(
+				removeIndex)
+				* removeGroupSize)
+				/ (mergeGroupSize + removeGroupSize);
+
+		// Generate the MERGE
+
+		parametersInput.get(this).setValue(mergeIndex, newValue);
+		for (Integer toBeMerged : removeGroup) {
+			// groupings[toBeMerged] = mergeIndex
+			groupingsInput.get(this).setValue(toBeMerged, mergeIndex);
+		}
+		parameterIsUsed.get(this).setValue(removeIndex, false);
+
+		//System.out.printf("Merge %d into %d\n", removeIndex, mergeIndex);
+		// Now we calculate the Hastings ratio.
+
+		Integer groupsOfSizeAtLeastTwo = indicesOccuringAtLeastTwice.size();
+
+		// If only a merge can happen, it has probability 1.
+		double logMergeProbability = 0;
+		// If splitting and merging can both happen, the merge probability
+		// is 1/2.
+		// Splitting can happen if
+		if (groupsOfSizeAtLeastTwo != 0) {
+			logMergeProbability = Math.log(0.5);
+		}
+
+		// If we merged two groups of size one, we gain a group of size at
+		// least two.
+		if (mergeGroupSize == 1 && removeGroupSize == 1) {
+			++groupsOfSizeAtLeastTwo;
+		}
+		// If we merged two groups of size at least two, we lose one in
+		// number.
+		if (mergeGroupSize >= 2 && removeGroupSize >= 2) {
+			--groupsOfSizeAtLeastTwo;
+		}
+
+		// If, after this, only a split can happen, that split has
+		// probability 1.
+		double logSplitProbability = 0;
+		// If splitting and merging will both be options, the split
+		// probability is 1/2.
+		// This is not the case if we merged the last two groups.
+		if (nGroups != 2) {
+			logSplitProbability = Math.log(0.5);
+		}
+
+		// The proposal ratio for for a merge move is
+		// [ P_s(M') 1/N(M') 1/(2^(n'_i+n'_j-1)-1) 1/(q' (n'_i+n'_j)) ]/[
+		// P_m(M) 1/(k nCr 2) ]
+
+		Double p = logSplitProbability
+				- Math.log(groupsOfSizeAtLeastTwo)
+				- Math.log(Math.pow(2, mergeGroupSize + removeGroupSize - 1) - 1)
+				- Math.log(
+				// TODO: Understand how the rate plays a role here
+				parametersInput.get().getValue(mergeIndex)
+						* (mergeGroupSize + removeGroupSize))
+				- logMergeProbability + Binomial.logChoose(k, 2);
+		return p;
 
 	}
 }
