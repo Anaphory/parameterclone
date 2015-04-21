@@ -47,10 +47,9 @@ public class SplitOperator extends Operator {
 	public Input<IntegerParameter> groupingsInput = new Input<IntegerParameter>(
 			"groupings", "parameter selection indices", new IntegerParameter(),
 			Validate.REQUIRED);
-	public Input<BooleanParameter> parameterIsUsed = new Input<BooleanParameter>(
-			"parameterIsUsed",
-			"stores whether the corresponding element of parameters is active",
-			Validate.REQUIRED);
+	public Input<IntegerParameter> sizesInput = new Input<IntegerParameter>(
+			"sizes", "stores how many indices are pointing to each parameter",
+			(IntegerParameter) null);
 
 	Integer k;
 	Integer maxIndex;
@@ -67,11 +66,6 @@ public class SplitOperator extends Operator {
 						"All entries in groupings must be valid indices of parameters");
 			}
 		}
-		if (parameterIsUsed.get().getDimension() != parametersInput.get()
-				.getDimension()) {
-			throw new Exception(
-					"parameterIsUsed must correspond to parameters in dimension");
-		}
 	}
 
 	/**
@@ -82,55 +76,72 @@ public class SplitOperator extends Operator {
 	public double proposal() {
 		// Find the composition of groups, in particular which ones can be
 		// split.
-		HashMap<Integer, ArrayList<Integer>> groups = new HashMap<Integer, ArrayList<Integer>>();
-		ArrayList<Integer> groupsOfSizeAtLeastTwo = new ArrayList<Integer>();
-		for (Integer index = groupingsInput.get().getDimension() - 1; index >= 0; --index) {
-			Integer value = groupingsInput.get().getNativeValue(index);
-			if (groups.get(value) != null) {
-				if (!groupsOfSizeAtLeastTwo.contains(value)) {
-					groupsOfSizeAtLeastTwo.add(value);
+
+		// If only a split can happen, it has probability 1.
+		// If splitting and merging can both happen, the split probability
+		// is 1/2.
+		Integer groups = 0;
+		Integer nM = 0;
+		for (int i = parametersInput.get(this).getDimension() - 1; i >= 0; --i) {
+			Integer size = sizesInput.get(this).getNativeValue(i);
+			if (size > 0) {
+				++groups;
+				if (size >= 2) {
+					nM += 1;
 				}
-			} else {
-				ArrayList<Integer> newGroup = new ArrayList<Integer>();
-				groups.put(value, newGroup);
 			}
-			groups.get(value).add(index);
 		}
-		Integer nM = groupsOfSizeAtLeastTwo.size();
+		double logSplitProbability = groups > 1 ? Math.log(0.5) : 1;
 
 		// Exclude fringe cases
 		if (nM == 0) {
 			// There is no group that could be split
-			//System.out.printf("Split -- No group to be split\n");
+			// System.out.printf("Split -- No group to be split\n");
 			return Double.NEGATIVE_INFINITY;
 		}
 
-		// Generate the parameter index for the new group
+		// Generate the parameter index for the new group and find the index of
+		// the group to be split
+		Integer rawGroupToBeSplit = Randomizer.nextInt(nM);
+		Integer groupToBeSplit = 0;
 		Integer newIndex = null;
-		for (Integer index = parametersInput.get().getDimension() - 1; index >= 0; --index) {
-			// Check the available indices from high to low:
-			if (!parameterIsUsed.get().getValue(index)) {
+		Integer steps = sizesInput.get(this).getDimension();
+		for (int index = 0; index < steps; ++index) {
+			// Check the available indices from low to high:
+			if (sizesInput.get(this).getValue(index) == 0) {
 				// use the first available index encountered
-				newIndex = index;
-				break;
+				if (newIndex == null) {
+					newIndex = index;
+				}
+			}
+			if (sizesInput.get(this).getValue(index) < 2 & rawGroupToBeSplit >= 0) {
+				++groupToBeSplit;
+			} else {
+				++groupToBeSplit;
+				--rawGroupToBeSplit;
 			}
 		}
+		groupToBeSplit = groupToBeSplit + rawGroupToBeSplit;
 		if (newIndex == null) {
-			//System.out.printf("Split -- No newIndex\n");
+			// System.out.printf("Split -- No newIndex\n");
 			return Double.NEGATIVE_INFINITY;
 		}
 
 		// Generate the SPLIT
 
-		parameterIsUsed.get(this).setValue(newIndex, true);
-
-		Integer groupToBeSplit = groupsOfSizeAtLeastTwo.get(Randomizer
-				.nextInt(nM));
-
-		ArrayList<Integer> oldGroup = groups.get(groupToBeSplit);
+		ArrayList<Integer> oldGroup = new ArrayList<Integer>();
+		for (int index = groupingsInput.get(this).getDimension() - 1; index >= 0; --index) {
+			if (groupingsInput.get(this).getNativeValue(index) == groupToBeSplit) {
+				oldGroup.add(index);
+			}
+		}
+		if (oldGroup.size() <= 1){
+			System.out.println("Nope");
+		}
+			
 		Integer firstInNewGroup = Randomizer.nextInt(oldGroup.size() - 1) + 1;
 
-		//System.out.printf("Split %d into %d\n", groupToBeSplit, newIndex);
+		// System.out.printf("Split %d into %d\n", groupToBeSplit, newIndex);
 
 		// Moving an entry from one group to another means changing the
 		// corresponding value in groupings.
@@ -156,6 +167,13 @@ public class SplitOperator extends Operator {
 				--oldGroupSize;
 			}
 		}
+
+		sizesInput.get(this).setValue(newIndex, newGroupSize);
+		sizesInput.get(this).setValue(groupToBeSplit, oldGroupSize);
+
+		Double logJacobian = -Math.log(newGroupSize + oldGroupSize)
+				+ Math.log(newGroupSize) + Math.log(oldGroupSize);
+
 		// Change the parameter value those entries now refer to, to reflect
 		// the old value.
 		// TODO: Follow the Pagel & Meade paper, doing one of:
@@ -165,14 +183,6 @@ public class SplitOperator extends Operator {
 		parametersInput.get(this).setValue(newIndex,
 				parametersInput.get(this).getValue(groupToBeSplit));
 
-		// If only a split can happen, it has probability 1.
-		double logSplitProbability = 0;
-		// If splitting and merging can both happen, the split probability
-		// is 1/2.
-		if (groups.size() != 1) {
-			logSplitProbability = Math.log(0.5);
-		}
-
 		// If, after this, only a merge can happen, that merge has
 		// probability 1.
 		double logMergeProbability = 0;
@@ -181,8 +191,7 @@ public class SplitOperator extends Operator {
 		// This is not the case if we split the last group of size at least
 		// two into two
 		// single groups of size one.
-		if (groupsOfSizeAtLeastTwo.size() != 1 || newGroupSize != 1
-				|| oldGroupSize != 1) {
+		if (nM != 1 || newGroupSize != 1 || oldGroupSize != 1) {
 			logMergeProbability = Math.log(0.5);
 		}
 
@@ -192,11 +201,11 @@ public class SplitOperator extends Operator {
 
 		Double p = logMergeProbability - Binomial.logChoose(k, 2)
 				- logSplitProbability
-				+ Math.log(groupsOfSizeAtLeastTwo.size())
+				+ Math.log(nM)
 				+ Math.log(Math.pow(2, newGroupSize + oldGroupSize - 1) - 1)
 				// TODO: Understand how the rate plays a role here
 				+ Math.log(parametersInput.get().getValue(groupToBeSplit)
-						* (newGroupSize + oldGroupSize));
+						* (newGroupSize + oldGroupSize)) + logJacobian;
 		return p;
 	}
 }

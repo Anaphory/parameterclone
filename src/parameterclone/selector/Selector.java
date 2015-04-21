@@ -47,8 +47,8 @@ public class Selector extends CalculationNode implements Loggable, Function {
 	public Input<IntegerParameter> groupingsInput = new Input<IntegerParameter>(
 			"groupings", "parameter selection indices",
 			new IntegerParameter(), Validate.REQUIRED);
-	public Input<BooleanParameter> parameterIsUsed = new Input<BooleanParameter>(
-			"parameterIsUsed", "stores whether the corresponding element of parameters is active",
+	public Input<IntegerParameter> sizesInput = new Input<IntegerParameter>(
+			"sizes", "stores how many indices are pointing to each parameter",
 			Validate.REQUIRED);
 
 	// Member objects
@@ -73,7 +73,6 @@ public class Selector extends CalculationNode implements Loggable, Function {
 		}
 		// value = parametersInput[groupingsInput[entry]]
 		Integer index = groupingsInput.get().getNativeValue(entry);
-		parameterIsUsed.get().setValue(index, true);				
 		value = parametersInput.get().getValue(index);
 	}
 

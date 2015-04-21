@@ -47,10 +47,9 @@ public class MergeOperator extends Operator {
 			Validate.REQUIRED);
 	public Input<IntegerParameter> groupingsInput = new Input<IntegerParameter>(
 			"groupings", "parameter selection indices", Validate.REQUIRED);
-	public Input<BooleanParameter> parameterIsUsed = new Input<BooleanParameter>(
-			"parameterIsUsed",
-			"stores whether the corresponding element of parameters is active",
-			Validate.REQUIRED);
+	public Input<IntegerParameter> sizesInput = new Input<IntegerParameter>(
+			"sizes", "stores how many indices are pointing to each parameter",
+			(IntegerParameter) null);
 
 	Integer k;
 	Integer maxIndex;
@@ -67,10 +66,10 @@ public class MergeOperator extends Operator {
 						"All entries in groupings must be valid indices of parameters");
 			}
 		}
-		if (parameterIsUsed.get().getDimension() != parametersInput.get()
+		if (sizesInput.get().getDimension() != parametersInput.get()
 				.getDimension()) {
 			throw new Exception(
-					"parameterIsUsed must correspond to parameters in dimension");
+					"sizes must correspond to parameters in dimension");
 		}
 	}
 
@@ -106,7 +105,7 @@ public class MergeOperator extends Operator {
 
 		Integer nGroups = groupIndices.size();
 		if (nGroups <= 1) {
-			//System.out.printf("Merge -- only one group\n");
+			// System.out.printf("Merge -- only one group\n");
 			return Double.NEGATIVE_INFINITY;
 		}
 
@@ -125,6 +124,9 @@ public class MergeOperator extends Operator {
 		Integer mergeGroupSize = mergeGroup.size();
 		Integer removeGroupSize = removeGroup.size();
 
+		Double logJacobian = Math.log(mergeGroupSize + removeGroupSize)
+				- Math.log(mergeGroupSize) - Math.log(removeGroupSize);
+
 		double newValue = (parametersInput.get(this).getValue(mergeIndex)
 				* mergeGroupSize + parametersInput.get(this).getValue(
 				removeIndex)
@@ -138,9 +140,10 @@ public class MergeOperator extends Operator {
 			// groupings[toBeMerged] = mergeIndex
 			groupingsInput.get(this).setValue(toBeMerged, mergeIndex);
 		}
-		parameterIsUsed.get(this).setValue(removeIndex, false);
+		sizesInput.get(this).setValue(removeIndex, 0);
+		sizesInput.get(this).setValue(mergeIndex, (mergeGroupSize + removeGroupSize));
 
-		//System.out.printf("Merge %d into %d\n", removeIndex, mergeIndex);
+		// System.out.printf("Merge %d into %d\n", removeIndex, mergeIndex);
 		// Now we calculate the Hastings ratio.
 
 		Integer groupsOfSizeAtLeastTwo = indicesOccuringAtLeastTwice.size();
@@ -186,7 +189,7 @@ public class MergeOperator extends Operator {
 				// TODO: Understand how the rate plays a role here
 				parametersInput.get().getValue(mergeIndex)
 						* (mergeGroupSize + removeGroupSize))
-				- logMergeProbability + Binomial.logChoose(k, 2);
+				- logMergeProbability + Binomial.logChoose(k, 2) + logJacobian;
 		return p;
 
 	}

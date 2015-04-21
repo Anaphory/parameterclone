@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <beast version='2.0'
 	namespace="beast.core:beast.core.parameter:beast.math.distributions:beast.evolution.operators:parameterclone.splitandmerge">
-	<run chainLength="10000" id="mcmc" spec="MCMC">
+	<run chainLength="500000" id="mcmc" spec="MCMC">
 		<state id="state" storeEvery="100">
 			<stateNode spec="RealParameter" id="parameters" lower="1.0"
 				upper="5.0">
@@ -11,8 +11,8 @@
 				upper="10">
 				1 1 1
 			</stateNode>
-			<stateNode spec="BooleanParameter" id="active">
-				false true false
+			<stateNode spec="IntegerParameter" id="sizes">
+				0 3 0
 			</stateNode>
 		</state>
 
@@ -21,19 +21,18 @@
 		</distribution>
 
 		<operator id="Merger" spec="MergeOperator" weight="1">
-			<parameter name="parameterIsUsed" idref="active"></parameter>
+			<parameter name="sizes" idref="sizes"></parameter>
 			<parameter name="parameters" idref="parameters"></parameter>
 			<parameter name="groupings" idref="indices"></parameter>
 		</operator>
 		<operator id="Splitter" spec="SplitOperator" weight="1">
-			<parameter name="parameterIsUsed" idref="active"></parameter>
+			<parameter name="sizes" idref="sizes"></parameter>
 			<parameter name="parameters" idref="parameters"></parameter>
 			<parameter name="groupings" idref="indices"></parameter>
 		</operator>
 
-		<logger logEvery="100">
+		<logger logEvery="100" fileName="mergeandsplit.log">
 			<log idref="indices"></log>
-			<log idref="active"></log>
 		</logger>
 	</run>
 </beast>
