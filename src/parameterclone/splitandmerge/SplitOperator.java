@@ -51,12 +51,10 @@ public class SplitOperator extends Operator {
 			"sizes", "stores how many indices are pointing to each parameter",
 			(IntegerParameter) null);
 
-	Integer k;
 	Integer maxIndex;
 
 	@Override
 	public void initAndValidate() throws Exception {
-		k = groupingsInput.get().getDimension();
 		maxIndex = parametersInput.get().getDimension();
 		// RealParameter does not implement java.lang.iterable, so we must do
 		// the iteration by hand.
@@ -91,7 +89,7 @@ public class SplitOperator extends Operator {
 				}
 			}
 		}
-		double logSplitProbability = groups > 1 ? Math.log(0.5) : 1;
+		double logSplitProbability = groups > 1 ? Math.log(0.5) : 0.;
 
 		// Exclude fringe cases
 		if (nM == 0) {
@@ -106,6 +104,7 @@ public class SplitOperator extends Operator {
 		Integer groupToBeSplit = 0;
 		Integer newIndex = null;
 		Integer steps = sizesInput.get(this).getDimension();
+		Integer k = 0;
 		for (int index = 0; index < steps; ++index) {
 			// Check the available indices from low to high:
 			if (sizesInput.get(this).getValue(index) == 0) {
@@ -113,8 +112,11 @@ public class SplitOperator extends Operator {
 				if (newIndex == null) {
 					newIndex = index;
 				}
+			} else {
+				++k;
 			}
-			if (sizesInput.get(this).getValue(index) < 2 & rawGroupToBeSplit >= 0) {
+			if (sizesInput.get(this).getValue(index) < 2
+					& rawGroupToBeSplit >= 0) {
 				++groupToBeSplit;
 			} else {
 				++groupToBeSplit;
@@ -135,25 +137,20 @@ public class SplitOperator extends Operator {
 				oldGroup.add(index);
 			}
 		}
-		if (oldGroup.size() <= 1){
-			System.out.println("Nope");
+		if (oldGroup.size() <= 1) {
+			// System.out.printf("Split -- Splitting a non-group\n");
+			return Double.NEGATIVE_INFINITY;
 		}
-			
-		Integer firstInNewGroup = Randomizer.nextInt(oldGroup.size() - 1) + 1;
 
 		// System.out.printf("Split %d into %d\n", groupToBeSplit, newIndex);
 
 		// Moving an entry from one group to another means changing the
 		// corresponding value in groupings.
-		// At least one value has to move, so remove it from the oldGroup to
-		// not hit it twice.
-		groupingsInput.get(this).setValue(
-				oldGroup.remove((int) firstInNewGroup), newIndex);
-		// If we do not convert to "(int)", it tries to remove an element of
-		// that value,
-		// as per the alternative definition of remove(Object O)
+		// I theory, there should be a way without rejections.
+		// But for correct-before-efficient reasons, just generate any
+		// partition, and reject the operator when the partition is trivial.
 
-		Integer newGroupSize = 1;
+		Integer newGroupSize = 0;
 		Integer oldGroupSize = oldGroup.size();
 
 		// Go through the old list from the end, and either move or keep
@@ -166,6 +163,11 @@ public class SplitOperator extends Operator {
 				++newGroupSize;
 				--oldGroupSize;
 			}
+		}
+		
+		if (newGroupSize == 0 || oldGroupSize == 0) {
+			// System.out.printf("Split -- Non-Split generated\n");
+			return Double.NEGATIVE_INFINITY;
 		}
 
 		sizesInput.get(this).setValue(newIndex, newGroupSize);
@@ -183,29 +185,39 @@ public class SplitOperator extends Operator {
 		parametersInput.get(this).setValue(newIndex,
 				parametersInput.get(this).getValue(groupToBeSplit));
 
+		// In order to keep dimensions matched (cf. Green 1995, p. 716), there
+		// needs to be a bijection between the pre-image and the image of this
+		// operator and its inverse. This is mitigated by a random distortion of
+		// the rates, keeping the sum of rates constant.
+		// The proposal ration needs to take that into account.
+		double rate = parametersInput.get(this).getValue(groupToBeSplit);
+		double mu = Randomizer.uniform(-oldGroupSize * rate, newGroupSize
+				* rate);
+		parametersInput.get(this).setValue(groupToBeSplit,
+				rate + mu / oldGroupSize);
+		parametersInput.get(this).setValue(newIndex, rate - mu / newGroupSize);
+		double bijectionDensity = Math
+				.log(rate * (oldGroupSize + newGroupSize));
+
 		// If, after this, only a merge can happen, that merge has
 		// probability 1.
-		double logMergeProbability = 0;
+		// This is the case if we split the last group of size at least
+		// two into two single groups of size one.
 		// If splitting and merging will both be options, the merge
 		// probability is 1/2.
-		// This is not the case if we split the last group of size at least
-		// two into two
-		// single groups of size one.
-		if (nM != 1 || newGroupSize != 1 || oldGroupSize != 1) {
-			logMergeProbability = Math.log(0.5);
-		}
+		double logMergeProbability = (nM == 1 && newGroupSize == 1 && oldGroupSize == 1) ? 0
+				: Math.log(0.5);
 
 		// The proposal ratio for for a split move is
-		// [ P_m(M') 1/(k nCr 2) ]/[ P_s(M) 1/N(M) 1/(2^(n_i+n_j-1)-1) 1/(q
+		// [ P_m(M') 1/(k' nCr 2) ]/[ P_s(M) 1/N(M) 1/(2^(n_i+n_j-1)-1) 1/(q
 		// (n_i+n_j)) ]
-
-		Double p = logMergeProbability - Binomial.logChoose(k, 2)
-				- logSplitProbability
-				+ Math.log(nM)
+		// NOTE: The reference states (k nCr 2), but that seems to be a typo. We
+		// use k' = k+1 after a split.
+		Double p = logMergeProbability - Binomial.logChoose(k + 1, 2)
+				- logSplitProbability + Math.log(nM)
 				+ Math.log(Math.pow(2, newGroupSize + oldGroupSize - 1) - 1)
-				// TODO: Understand how the rate plays a role here
-				+ Math.log(parametersInput.get().getValue(groupToBeSplit)
-						* (newGroupSize + oldGroupSize)) + logJacobian;
+				+ bijectionDensity + logJacobian;
+		// System.out.printf("Split: %f\n", p);
 		return p;
 	}
 }

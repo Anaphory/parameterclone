@@ -51,12 +51,10 @@ public class MergeOperator extends Operator {
 			"sizes", "stores how many indices are pointing to each parameter",
 			(IntegerParameter) null);
 
-	Integer k;
 	Integer maxIndex;
 
 	@Override
 	public void initAndValidate() throws Exception {
-		k = groupingsInput.get().getDimension();
 		maxIndex = parametersInput.get().getDimension();
 		// Array-like RealParameters do not implement java.lang.iterable, so we
 		// must do the iteration by hand.
@@ -127,21 +125,31 @@ public class MergeOperator extends Operator {
 		Double logJacobian = Math.log(mergeGroupSize + removeGroupSize)
 				- Math.log(mergeGroupSize) - Math.log(removeGroupSize);
 
-		double newValue = (parametersInput.get(this).getValue(mergeIndex)
-				* mergeGroupSize + parametersInput.get(this).getValue(
-				removeIndex)
-				* removeGroupSize)
-				/ (mergeGroupSize + removeGroupSize);
-
 		// Generate the MERGE
 
-		parametersInput.get(this).setValue(mergeIndex, newValue);
 		for (Integer toBeMerged : removeGroup) {
 			// groupings[toBeMerged] = mergeIndex
 			groupingsInput.get(this).setValue(toBeMerged, mergeIndex);
 		}
+
+		// The merge takes a weighted mean, to conserve the sum of rates.
+		double mergedRates = (parametersInput.get(this).getValue(mergeIndex)
+				* mergeGroupSize + parametersInput.get(this).getValue(
+				removeIndex)
+				* removeGroupSize)
+				/ (mergeGroupSize + removeGroupSize);
+		parametersInput.get(this).setValue(mergeIndex, mergedRates);
+		// In order to keep dimensions matched (cf. Green 1995, p. 716), there
+		// needs to be a bijection between the pre-image and the image of this
+		// operator and its inverse. This is mitigated by a random variable in
+		// SplitOperator. The proposal ration needs to take that into account.
+		double bijectionDensity = Math.log(mergedRates
+				* (mergeGroupSize + removeGroupSize));
+		
+		// Update the group size caches
 		sizesInput.get(this).setValue(removeIndex, 0);
-		sizesInput.get(this).setValue(mergeIndex, (mergeGroupSize + removeGroupSize));
+		sizesInput.get(this).setValue(mergeIndex,
+				(mergeGroupSize + removeGroupSize));
 
 		// System.out.printf("Merge %d into %d\n", removeIndex, mergeIndex);
 		// Now we calculate the Hastings ratio.
@@ -149,13 +157,10 @@ public class MergeOperator extends Operator {
 		Integer groupsOfSizeAtLeastTwo = indicesOccuringAtLeastTwice.size();
 
 		// If only a merge can happen, it has probability 1.
-		double logMergeProbability = 0;
 		// If splitting and merging can both happen, the merge probability
 		// is 1/2.
-		// Splitting can happen if
-		if (groupsOfSizeAtLeastTwo != 0) {
-			logMergeProbability = Math.log(0.5);
-		}
+		double logMergeProbability = groupsOfSizeAtLeastTwo != 0 ? Math
+				.log(0.5) : 0;
 
 		// If we merged two groups of size one, we gain a group of size at
 		// least two.
@@ -174,7 +179,7 @@ public class MergeOperator extends Operator {
 		// If splitting and merging will both be options, the split
 		// probability is 1/2.
 		// This is not the case if we merged the last two groups.
-		if (nGroups != 2) {
+		if (nGroups > 2) {
 			logSplitProbability = Math.log(0.5);
 		}
 
@@ -185,11 +190,9 @@ public class MergeOperator extends Operator {
 		Double p = logSplitProbability
 				- Math.log(groupsOfSizeAtLeastTwo)
 				- Math.log(Math.pow(2, mergeGroupSize + removeGroupSize - 1) - 1)
-				- Math.log(
-				// TODO: Understand how the rate plays a role here
-				parametersInput.get().getValue(mergeIndex)
-						* (mergeGroupSize + removeGroupSize))
-				- logMergeProbability + Binomial.logChoose(k, 2) + logJacobian;
+				- bijectionDensity - logMergeProbability
+				+ Binomial.logChoose(nGroups, 2) + logJacobian;
+		// System.out.printf("Merge: %f\n", p);
 		return p;
 
 	}

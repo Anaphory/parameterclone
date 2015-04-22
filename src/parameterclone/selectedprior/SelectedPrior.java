@@ -7,6 +7,7 @@ import beast.core.Function;
 import beast.core.Input;
 import beast.core.Input.Validate;
 import beast.core.parameter.BooleanParameter;
+import beast.core.parameter.IntegerParameter;
 import beast.core.parameter.RealParameter;
 import beast.math.distributions.ParametricDistribution;
 import beast.math.distributions.Prior;
@@ -16,7 +17,7 @@ import beast.math.distributions.Prior;
  *
  */
 public class SelectedPrior extends Prior {
-	public Input<BooleanParameter> active = new Input<BooleanParameter>("active", "array denoting whether dimensions of x are active", Validate.REQUIRED);
+	public Input<IntegerParameter> active = new Input<IntegerParameter>("active", "array denoting whether dimensions of x are active: 0 means inactive", Validate.REQUIRED);
 
 	ParametricDistribution dist;
 
@@ -40,8 +41,8 @@ public class SelectedPrior extends Prior {
         
         // cut x down to include only the active entries of m_x
         Integer sum = 0;
-        for (Boolean i : active.get().getValues()) {
-            sum += i ? 1 : 0;
+        for (Integer i : active.get().getValues()) {
+            sum += i!=0 ? 1 : 0;
         }
         
         // essentially, cut_x = m_x[active]
@@ -49,7 +50,7 @@ public class SelectedPrior extends Prior {
         cut_x.setDimension(sum);
         int j = sum - 1;
         for (int i = x.getDimension() - 1; i>=0; --i) {
-        	if (active.get().getValue(i)) {
+        	if (active.get().getValue(i) != 0) {
             	cut_x.setValue(j, x.getArrayValue(i));
             	--j;
 			}

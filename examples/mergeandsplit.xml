@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <beast version='2.0'
-	namespace="beast.core:beast.core.parameter:beast.math.distributions:beast.evolution.operators:parameterclone.splitandmerge">
+	namespace="beast.core:beast.core.parameter:beast.math.distributions:beast.evolution.operators:parameterclone.splitandmerge:parameterclone.selectedprior">
 	<run chainLength="500000" id="mcmc" spec="MCMC">
 		<state id="state" storeEvery="100">
 			<stateNode spec="RealParameter" id="parameters" lower="1.0"
@@ -30,9 +30,10 @@
 			<parameter name="parameters" idref="parameters"></parameter>
 			<parameter name="groupings" idref="indices"></parameter>
 		</operator>
-
+		
 		<logger logEvery="100" fileName="mergeandsplit.log">
 			<log idref="indices"></log>
+			<log idref="parameters"></log>
 		</logger>
 	</run>
 </beast>
