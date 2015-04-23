@@ -19,15 +19,13 @@
 
 package parameterclone.splitandmerge;
 
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.HashSet;
 
 import beast.core.Citation;
 import beast.core.Description;
 import beast.core.Input;
 import beast.core.Input.Validate;
 import beast.core.Operator;
-import beast.core.parameter.BooleanParameter;
 import beast.core.parameter.IntegerParameter;
 import beast.core.parameter.RealParameter;
 import beast.math.Binomial;
@@ -78,126 +76,92 @@ public class SplitOperator extends Operator {
 		// If only a split can happen, it has probability 1.
 		// If splitting and merging can both happen, the split probability
 		// is 1/2.
-		Integer groups = 0;
-		Integer nM = 0;
-		for (int i = parametersInput.get(this).getDimension() - 1; i >= 0; --i) {
-			Integer size = sizesInput.get(this).getNativeValue(i);
-			if (size > 0) {
-				++groups;
-				if (size >= 2) {
-					nM += 1;
-				}
-			}
-		}
-		double logSplitProbability = groups > 1 ? Math.log(0.5) : 0.;
-
-		// Exclude fringe cases
-		if (nM == 0) {
-			// There is no group that could be split
-			// System.out.printf("Split -- No group to be split\n");
-			return Double.NEGATIVE_INFINITY;
-		}
-
-		// Generate the parameter index for the new group and find the index of
-		// the group to be split
-		Integer rawGroupToBeSplit = Randomizer.nextInt(nM);
-		Integer groupToBeSplit = 0;
+		int nGroups = 0;
+		int groupsOfSizeAtLeastTwo = 0;
+		int[] trueGroupIndices = new int[parametersInput.get().getDimension()];
+		int i = 0;
 		Integer newIndex = null;
-		Integer steps = sizesInput.get(this).getDimension();
-		Integer k = 0;
-		for (int index = 0; index < steps; ++index) {
-			// Check the available indices from low to high:
-			if (sizesInput.get(this).getValue(index) == 0) {
-				// use the first available index encountered
-				if (newIndex == null) {
-					newIndex = index;
+		for (int size : sizesInput.get(this).getValues()) {
+			if (size > 0) {
+				++nGroups;
+				if (size > 1) {
+					trueGroupIndices[groupsOfSizeAtLeastTwo] = i;
+					++groupsOfSizeAtLeastTwo;
 				}
 			} else {
-				++k;
+				if (newIndex == null) {
+					newIndex = i;
+				}
 			}
-			if (sizesInput.get(this).getValue(index) < 2
-					& rawGroupToBeSplit >= 0) {
-				++groupToBeSplit;
-			} else {
-				++groupToBeSplit;
-				--rawGroupToBeSplit;
-			}
+			++i;
 		}
-		groupToBeSplit = groupToBeSplit + rawGroupToBeSplit;
-		if (newIndex == null) {
-			// System.out.printf("Split -- No newIndex\n");
+		
+		if (groupsOfSizeAtLeastTwo < 1) {
+			// System.out.printf("Split: No group large enough to split");
 			return Double.NEGATIVE_INFINITY;
+		}
+		
+		int rawSplitIndex = Randomizer.nextInt(groupsOfSizeAtLeastTwo);
+		int splitIndex = trueGroupIndices[rawSplitIndex];
+
+		HashSet<Integer> splitGroup = new HashSet<Integer>();
+		i = 0;
+		for (int index : groupingsInput.get(this).getValues()) {
+			if (index == splitIndex) {
+				splitGroup.add(i);
+			}
+			++i;
 		}
 
 		// Generate the SPLIT
-
-		ArrayList<Integer> oldGroup = new ArrayList<Integer>();
-		for (int index = groupingsInput.get(this).getDimension() - 1; index >= 0; --index) {
-			if (groupingsInput.get(this).getNativeValue(index) == groupToBeSplit) {
-				oldGroup.add(index);
-			}
-		}
-		if (oldGroup.size() <= 1) {
-			// System.out.printf("Split -- Splitting a non-group\n");
-			return Double.NEGATIVE_INFINITY;
-		}
-
-		// System.out.printf("Split %d into %d\n", groupToBeSplit, newIndex);
-
-		// Moving an entry from one group to another means changing the
-		// corresponding value in groupings.
-		// I theory, there should be a way without rejections.
-		// But for correct-before-efficient reasons, just generate any
-		// partition, and reject the operator when the partition is trivial.
-
 		Integer newGroupSize = 0;
-		Integer oldGroupSize = oldGroup.size();
+		Integer oldGroupSize = splitGroup.size();
 
 		// Go through the old list from the end, and either move or keep
 		// entries. Note that index 0 is definitely staying in the old
 		// group, so we only iterate while index > 0.
-		for (int index = oldGroup.size() - 1; index > 0; --index) {
+		for (int index : splitGroup) {
 			if (Randomizer.nextBoolean()) {
-				groupingsInput.get(this).setValue(oldGroup.remove((int) index),
-						newIndex);
+				groupingsInput.get(this).setValue(index, newIndex);
 				++newGroupSize;
 				--oldGroupSize;
 			}
 		}
 		
+		// Moving an entry from one group to another means changing the
+		// corresponding value in groupings.
+		// In theory, there should be a way without rejections.
+		// But for correct-before-efficient reasons, just generate any
+		// partition, and reject the operator when the partition is trivial.
 		if (newGroupSize == 0 || oldGroupSize == 0) {
 			// System.out.printf("Split -- Non-Split generated\n");
 			return Double.NEGATIVE_INFINITY;
 		}
 
-		sizesInput.get(this).setValue(newIndex, newGroupSize);
-		sizesInput.get(this).setValue(groupToBeSplit, oldGroupSize);
+		Double logJacobian = Math.log(newGroupSize + oldGroupSize)
+				- Math.log(newGroupSize) - Math.log(oldGroupSize);
 
-		Double logJacobian = -Math.log(newGroupSize + oldGroupSize)
-				+ Math.log(newGroupSize) + Math.log(oldGroupSize);
-
-		// Change the parameter value those entries now refer to, to reflect
-		// the old value.
-		// TODO: Follow the Pagel & Meade paper, doing one of:
-		// * Calling an appropriate Operator
-		// * Implementing the change here
-		// * Making sure that it works without that step
-		parametersInput.get(this).setValue(newIndex,
-				parametersInput.get(this).getValue(groupToBeSplit));
-
+		
 		// In order to keep dimensions matched (cf. Green 1995, p. 716), there
 		// needs to be a bijection between the pre-image and the image of this
 		// operator and its inverse. This is mitigated by a random distortion of
 		// the rates, keeping the sum of rates constant.
 		// The proposal ration needs to take that into account.
-		double rate = parametersInput.get(this).getValue(groupToBeSplit);
+		double rate = parametersInput.get(this).getValue(splitIndex);
 		double mu = Randomizer.uniform(-oldGroupSize * rate, newGroupSize
 				* rate);
-		parametersInput.get(this).setValue(groupToBeSplit,
+		parametersInput.get(this).setValue(splitIndex,
 				rate + mu / oldGroupSize);
 		parametersInput.get(this).setValue(newIndex, rate - mu / newGroupSize);
 		double bijectionDensity = Math
 				.log(rate * (oldGroupSize + newGroupSize));
+
+		// Update the group size caches
+		sizesInput.get(this).setValue(newIndex, newGroupSize);
+		sizesInput.get(this).setValue(splitIndex, oldGroupSize);
+
+		// System.out.printf("Split %d into %d\n", splitIndex, newIndex);
+		// Now we calculate the Hastings ratio.
 
 		// If, after this, only a merge can happen, that merge has
 		// probability 1.
@@ -205,16 +169,25 @@ public class SplitOperator extends Operator {
 		// two into two single groups of size one.
 		// If splitting and merging will both be options, the merge
 		// probability is 1/2.
-		double logMergeProbability = (nM == 1 && newGroupSize == 1 && oldGroupSize == 1) ? 0
+		double logMergeProbability = (groupsOfSizeAtLeastTwo == 1 && newGroupSize == 1 && oldGroupSize == 1) ? 0
 				: Math.log(0.5);
+		
+		// If here only a split can happen, that split has
+		// probability 1.
+		double logSplitProbability = 0;
+		// If splitting and merging are both be options, the split
+		// probability is 1/2.
+		if (nGroups >= 2) {
+			logSplitProbability = Math.log(0.5);
+		}
 
 		// The proposal ratio for for a split move is
 		// [ P_m(M') 1/(k' nCr 2) ]/[ P_s(M) 1/N(M) 1/(2^(n_i+n_j-1)-1) 1/(q
 		// (n_i+n_j)) ]
 		// NOTE: The reference states (k nCr 2), but that seems to be a typo. We
 		// use k' = k+1 after a split.
-		Double p = logMergeProbability - Binomial.logChoose(k + 1, 2)
-				- logSplitProbability + Math.log(nM)
+		Double p = logMergeProbability - Binomial.logChoose(nGroups+1, 2)
+				- logSplitProbability + Math.log(groupsOfSizeAtLeastTwo)
 				+ Math.log(Math.pow(2, newGroupSize + oldGroupSize - 1) - 1)
 				+ bijectionDensity + logJacobian;
 		// System.out.printf("Split: %f\n", p);

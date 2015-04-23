@@ -1,39 +1,40 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <beast version='2.0'
 	namespace="beast.core:beast.core.parameter:beast.math.distributions:beast.evolution.operators:parameterclone.splitandmerge:parameterclone.selectedprior">
-	<run chainLength="500000" id="mcmc" spec="MCMC">
+	<run chainLength="10000000" id="mcmc" spec="MCMC">
 		<state id="state" storeEvery="100">
 			<stateNode spec="RealParameter" id="parameters" lower="1.0"
 				upper="5.0">
-				1.5 1.5 1.5
+				1.5 1.5 1.5 1.5 1.5
 			</stateNode>
 			<stateNode spec="IntegerParameter" id="indices" lower="0"
 				upper="10">
-				1 1 1
+				1 1 1 1 1
 			</stateNode>
 			<stateNode spec="IntegerParameter" id="sizes">
-				0 3 0
+				0 5 0 0 0
 			</stateNode>
 		</state>
 
 		<distribution spec="Prior" x="@parameters">
-			<distr spec="Uniform" lower="1.0" upper="5.0"></distr>
+			<distr spec="Uniform" lower="1.0" upper="5.0" />
 		</distribution>
 
 		<operator id="Merger" spec="MergeOperator" weight="1">
-			<parameter name="sizes" idref="sizes"></parameter>
-			<parameter name="parameters" idref="parameters"></parameter>
-			<parameter name="groupings" idref="indices"></parameter>
+			<parameter name="sizes" idref="sizes" />
+			<parameter name="parameters" idref="parameters" />
+			<parameter name="groupings" idref="indices" />
 		</operator>
 		<operator id="Splitter" spec="SplitOperator" weight="1">
-			<parameter name="sizes" idref="sizes"></parameter>
-			<parameter name="parameters" idref="parameters"></parameter>
-			<parameter name="groupings" idref="indices"></parameter>
+			<parameter name="sizes" idref="sizes" />
+			<parameter name="parameters" idref="parameters" />
+			<parameter name="groupings" idref="indices" />
 		</operator>
-		
+
 		<logger logEvery="100" fileName="mergeandsplit.log">
-			<log idref="indices"></log>
-			<log idref="parameters"></log>
+			<log idref="indices" />
+			<log idref="parameters" />
+			<log idref="sizes" />
 		</logger>
 	</run>
 </beast>
