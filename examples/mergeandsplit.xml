@@ -1,23 +1,22 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <beast version='2.0'
 	namespace="beast.core:beast.core.parameter:beast.math.distributions:beast.evolution.operators:parameterclone.splitandmerge:parameterclone.selectedprior">
-	<run chainLength="10000000" id="mcmc" spec="MCMC">
+	<run chainLength="1000000" id="mcmc" spec="MCMC">
 		<state id="state" storeEvery="100">
-			<stateNode spec="RealParameter" id="parameters" lower="1.0"
-				upper="5.0">
-				1.5 1.5 1.5 1.5 1.5
+			<stateNode spec="RealParameter" id="parameters" lower="0.0">
+			    .5 0 0 0 0 0
 			</stateNode>
-			<stateNode spec="IntegerParameter" id="indices" lower="0"
-				upper="10">
-				1 1 1 1 1
+			<stateNode spec="IntegerParameter" id="indices" lower="0" upper="4">
+				0 0 0 0 0 0
 			</stateNode>
 			<stateNode spec="IntegerParameter" id="sizes">
-				0 5 0 0 0
+				6 0 0 0 0 0
 			</stateNode>
+			<stateNode spec="IntegerParameter" id="empty">0</stateNode>
 		</state>
 
-		<distribution spec="Prior" x="@parameters">
-			<distr spec="Uniform" lower="1.0" upper="5.0" />
+		<distribution spec="Prior" x="@empty">
+			<distr spec="Uniform" lower="0" upper="1" />
 		</distribution>
 
 		<operator id="Merger" spec="MergeOperator" weight="1">
@@ -31,7 +30,7 @@
 			<parameter name="groupings" idref="indices" />
 		</operator>
 
-		<logger logEvery="100" fileName="mergeandsplit.log">
+		<logger logEvery="10" fileName="mergeandsplit.log">
 			<log idref="indices" />
 			<log idref="parameters" />
 			<log idref="sizes" />
