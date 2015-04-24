@@ -27,10 +27,9 @@ import beast.core.Description;
 import beast.core.Function;
 import beast.core.Input;
 import beast.core.Input.Validate;
-import beast.core.parameter.BooleanParameter;
+import beast.core.Loggable;
 import beast.core.parameter.IntegerParameter;
 import beast.core.parameter.RealParameter;
-import beast.core.Loggable;
 
 @Description("A calculation node that propagates one parameter from a vector of parameters")
 // Needed for the reversible-jump Markov chain described in
