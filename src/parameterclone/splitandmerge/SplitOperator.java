@@ -150,6 +150,7 @@ public class SplitOperator extends Operator {
 		double rate = parametersInput.get(this).getValue(splitIndex);
 		double mu = Randomizer.uniform(-oldGroupSize * rate, newGroupSize
 				* rate);
+		//parametersInput.get().log(0, System.out); System.out.println(mu);
 		parametersInput.get(this).setValue(splitIndex,
 				rate + mu / oldGroupSize);
 		parametersInput.get(this).setValue(newIndex, rate - mu / newGroupSize);

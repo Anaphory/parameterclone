@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
 <beast version='2.0'
 	namespace="beast.core:beast.core.parameter:beast.core.util:beast.math.distributions:beast.evolution.operators:parameterclone.splitandmerge:parameterclone.selector">
-	<run chainLength="9000000" id="mcmc" spec="MCMC" preBurnin="1000000">
+	<run chainLength="9000" id="mcmc" spec="MCMC" preBurnin="1000">
 		<state id="state" storeEvery="100">
 			<stateNode spec="RealParameter" id="parameters" lower="0.0">
-				0.1666666666666666 0 0 0 0 0
+				1 0 0 0 0 0
 			</stateNode>
 			<stateNode spec="IntegerParameter" id="indices" lower="0"
 				upper="6">
@@ -16,24 +17,11 @@
 		</state>
 
 		<distribution id="posterior" spec="CompoundDistribution">
-			<distribution id="likelihood" spec="CompoundDistribution">
-			</distribution>
-			<distribution id="prior" spec="Prior">
-				<x id="selector" spec="Selector">
-					<parameter name="entry" spec="IntegerParameter" id="range"
-						lower="0" upper="5">
-						0 1 2 3 4 5
-					</parameter>
-					<parameter name="sizes" idref="sizes" />
-					<parameter name="parameters" idref="parameters" />
-					<parameter name="groupings" idref="indices" />
-				</x>
-				<distr spec="Dirichlet">
+			<distribution id="likelihood" spec="CompoundDistribution"/>
+			<distribution id="prior" spec="Prior" x="@parameters">
+				<distr spec="huelsenbeck.RescaledDirichlet">
 					<!-- Use a flat distribution -->
-					<parameter name="alpha" spec="RealParameter" lower="0">
-						1 1 1
-						1 1 1
-					</parameter>
+					<parameter name="sizes" idref="sizes" />
 				</distr>
 			</distribution>
 		</distribution>
@@ -49,15 +37,23 @@
 			<parameter name="groupings" idref="indices" />
 		</operator>
 
-		<logger logEvery="1000">
-			<log idref="selector" />
+		<logger logEvery="1">
+			<log id="selector" spec="Selector">
+				<parameter name="entry" spec="IntegerParameter" id="range"
+					lower="0" upper="5">
+					0 1 2 3 4 5
+				</parameter>
+				<parameter name="sizes" idref="sizes" />
+				<parameter name="parameters" idref="parameters" />
+				<parameter name="groupings" idref="indices" />
+			</log>
 			<log idref="prior" />
 			<log idref="indices" />
 			<log idref="parameters" />
 			<log idref="sizes" />
 		</logger>
 
-		<logger logEvery="1000" fileName="indices.log">
+		<logger logEvery="1" fileName="indices.log">
 			<log idref="indices" />
 		</logger>
 	</run>
