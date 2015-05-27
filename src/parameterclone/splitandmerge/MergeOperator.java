@@ -124,7 +124,7 @@ public class MergeOperator extends Operator {
 		// Generate the MERGE
 		Integer mergeGroupSize = mergeGroup.size();
 		Integer removeGroupSize = removeGroup.size();
-		
+
 		for (Integer toBeMerged : removeGroup) {
 			// groupings[toBeMerged] = mergeIndex
 			groupingsInput.get(this).setValue(toBeMerged, mergeIndex);
@@ -156,12 +156,6 @@ public class MergeOperator extends Operator {
 		// System.out.printf("Merge %d into %d\n", removeIndex, mergeIndex);
 		// Now we calculate the Hastings ratio.
 
-		// If only a merge can happen, it has probability 1.
-		// If splitting and merging can both happen, the merge probability
-		// is 1/2.
-		double logMergeProbability = groupsOfSizeAtLeastTwo > 0 ? Math.log(0.5)
-				: 0;
-
 		// If we merged two groups of size one, we gain a group of size at
 		// least two.
 		if (mergeGroupSize == 1 && removeGroupSize == 1) {
@@ -173,26 +167,29 @@ public class MergeOperator extends Operator {
 			--groupsOfSizeAtLeastTwo;
 		}
 
-		// If, after this, only a split can happen, that split has
-		// probability 1.
-		double logSplitProbability = 0;
-		// If splitting and merging will both be options, the split
-		// probability is 1/2.
-		// This is the case unless we merged the last two groups.
-		if (nGroups-1 >= 2) {
-			logSplitProbability = Math.log(0.5);
-		}
+		/*
+		 * If, after this, only a split can happen, that split has probability
+		 * 1. But given that we attempt the merge move in that case anyway, we
+		 * leave that factor out. Similarly for the merge probability now.
+		 */
+		/*
+		 * double logSplitProbability = 0; double logMergeProbability =
+		 * groupsOfSizeAtLeastTwo > 0 ? Math.log(0.5) : 0;
+		 * 
+		 * if (nGroups - 1 >= 2) { logSplitProbability = Math.log(0.5); }
+		 */
 
 		// The proposal ratio for for a merge move is
 		// [ P_s(M') 1/N(M') 1/(2^(n'_i+n'_j-1)-1) 1/(q' (n'_i+n'_j)) ]/[
 		// P_m(M) 1/(k nCr 2) ]
 
-		Double p = logSplitProbability
-				- Math.log(groupsOfSizeAtLeastTwo)
+		Double p = -Math.log(groupsOfSizeAtLeastTwo)
 				- Math.log(Math.pow(2, mergeGroupSize + removeGroupSize - 1) - 1)
-				- bijectionDensity - logMergeProbability
-				+ Binomial.logChoose(nGroups, 2) + logJacobian;
-		// System.out.printf("Merge: %f\n", p);
+				- bijectionDensity + Binomial.logChoose(nGroups, 2)
+				+ logJacobian;
+		// + logSplitProbability
+		// - logMergeProbability
+		// System.out.printf("Merge: %f\n", Math.exp(p));
 		return p;
 
 	}
