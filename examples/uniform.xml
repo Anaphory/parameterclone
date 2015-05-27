@@ -5,13 +5,13 @@
 	<run chainLength="90000" id="mcmc" spec="MCMC" preBurnin="1">
 		<state id="state" storeEvery="100">
 			<stateNode spec="RealParameter" id="parameters" lower="0.0">
-				1 1 1 1 1
+				1 1 1 1 1 1
 			</stateNode>
 			<stateNode spec="IntegerParameter" id="indices" lower="0" upper="2">
-				0 2 1 0 0
+				0 2 1 0 0 0
 			</stateNode>
 			<stateNode spec="IntegerParameter" id="sizes">
-				3 1 1 0 0
+				4 1 1 0 0 0
 			</stateNode>
 		</state>
 
