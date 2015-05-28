@@ -33,7 +33,9 @@ import beast.core.parameter.RealParameter;
 
 @Description("A calculation node that propagates parameters from a vector of parameters")
 // Needed for the reversible-jump Markov chain described in
-@Citation("Pagel, M., Meade, A., 2006. Bayesian Analysis of Correlated Evolution of Discrete Characters by Reversible-Jump Markov Chain Monte Carlo. The American Naturalist 167, 808--825. doi:10.1086/503444")
+@Citation("Huelsenbeck, J.P., Larget, B., Alfaro, M.E., 2004. "
+		+ "Bayesian Phylogenetic Model Selection Using Reversible Jump Markov Chain Monte Carlo. "
+		+ "Mol Biol Evol 21, 1123-1133. doi:10.1093/molbev/msh123")
 public class Selector extends CalculationNode implements Loggable, Function {
 	// Input objects
 	final public Input<IntegerParameter> entryInput = new Input<IntegerParameter>(

@@ -143,12 +143,12 @@
 			</distribution>
 		</distribution>
 
-		<operator id="Merger" spec="MergeOperator" weight="5">
+		<operator id="Merger" spec="MergeOperator" weight="8">
 			<parameter name="sizes" idref="sizes" />
 			<parameter name="parameters" idref="parameters" />
 			<parameter name="groupings" idref="indices" />
 		</operator>
-		<operator id="Splitter" spec="SplitOperator" weight="5">
+		<operator id="Splitter" spec="SplitOperator" weight="8">
 			<parameter name="sizes" idref="sizes" />
 			<parameter name="parameters" idref="parameters" />
 			<parameter name="groupings" idref="indices" />
@@ -179,7 +179,7 @@
 			tree="@Tree.t:primate" weight="3.0" />
 
 		<operator delta="0.15" id="Exchanger.s:primate" spec="DeltaExchangeOperator"
-			weight="3">
+			weight="5">
 			<parameter idref="parameters" />
 			<weightvector idref="sizes" />
 		</operator>
