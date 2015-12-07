@@ -2,12 +2,19 @@ package parameterclone.selector;
 
 import beast.core.Citation;
 import beast.core.Description;
+import beast.core.Input;
+import beast.core.Input.Validate;
+import beast.core.parameter.IntegerParameter;
 
 @Description("A calculation node that propagates the used values from a vector of parameters")
 @Citation("Huelsenbeck, J.P., Larget, B., Alfaro, M.E., 2004. "
 		+ "Bayesian Phylogenetic Model Selection Using Reversible Jump Markov Chain Monte Carlo. "
 		+ "Mol Biol Evol 21, 1123-1133. doi:10.1093/molbev/msh123")
 public class SelectorSet extends Selector {
+	public Input<IntegerParameter> sizesInput = new Input<IntegerParameter>(
+			"sizes", "stores how many indices are pointing to each parameter",
+			Validate.REQUIRED);
+	
 	@Override
 	public int getDimension() {
 		int dim = 0;

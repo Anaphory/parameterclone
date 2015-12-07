@@ -94,6 +94,11 @@ public class SplitOperator extends Operator {
 			}
 			++i;
 		}
+		
+		if (newIndex == null) {
+			// System.out.printf("Split: Parameter space exhausted\n");
+			return Double.NEGATIVE_INFINITY;
+		}
 
 		if (nGroupsOfSizeAtLeastTwo < 1) {
 			// System.out.printf("Split: No group large enough to split\n");

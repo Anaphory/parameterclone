@@ -51,9 +51,8 @@ public class Selector extends CalculationNode implements Loggable, Function {
 	public Input<IntegerParameter> groupingsInput = new Input<IntegerParameter>(
 			"groupings", "parameter selection indices", new IntegerParameter(),
 			Validate.REQUIRED);
-	public Input<IntegerParameter> sizesInput = new Input<IntegerParameter>(
-			"sizes", "stores how many indices are pointing to each parameter",
-			Validate.REQUIRED);
+	public Input<Function> minusOneIsSpecialInput = new Input<Function>(
+			"minusOne", "Deliver this constant value for index -1"); 
 
 	// Member objects
 	protected IntegerParameter entries;
@@ -95,14 +94,18 @@ public class Selector extends CalculationNode implements Loggable, Function {
 
 	@Override
 	public double getArrayValue() {
-		return getArrayValue(0);
+		return minusOneIsSpecialInput.get().getArrayValue();
 	}
 
 	@Override
 	public double getArrayValue(int iDim) {
 		int index = groupingsInput.get().getNativeValue(
 				entries.getNativeValue(iDim));
-		return parametersInput.get().getValue(index);
+		if (index == -1) {
+			return minusOneIsSpecialInput.get().getArrayValue();
+		} else {
+			return parametersInput.get().getValue(index);
+		}
 	}
 
 	/**
