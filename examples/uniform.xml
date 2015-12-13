@@ -43,7 +43,6 @@
 					lower="0" upper="2">
 					0 1 2
 				</parameter>
-				<parameter name="sizes" idref="sizes" />
 				<parameter name="parameters" idref="parameters" />
 				<parameter name="groupings" idref="indices" />
 			</log>

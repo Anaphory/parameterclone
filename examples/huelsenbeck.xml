@@ -51,11 +51,11 @@
 	<map name="Normal">beast.math.distributions.Normal</map>
 
 
-	<run chainLength="9000000" id="mcmc" spec="MCMC" preBurnin="1000000">
+	<run chainLength="9000000" id="mcmc" spec="MCMC" preBurnin="1000000" sampleFromPrior="True">
 		<state id="state" storeEvery="1000">
 			<tree id="Tree.t:primate" name="stateNode">
 				<taxonset id="TaxonSet.coding" spec="TaxonSet">
-					<alignment filter="2-457,660-896" id="coding" spec="FilteredAlignment">
+					<alignment filter="1-896" id="coding" spec="FilteredAlignment">
 						<data idref="primate-mtDNA" />
 					</alignment>
 				</taxonset>
@@ -67,10 +67,10 @@
 			</stateNode>
 			<stateNode spec="IntegerParameter" id="indices" lower="0"
 				upper="2">
-				0 2 1 0 0 0
+				0 0 0 0 0 0
 			</stateNode>
 			<stateNode spec="IntegerParameter" id="sizes">
-				4 1 1 0 0 0
+				6 0 0 0 0 0
 			</stateNode>
 
 			<parameter dimension="4" id="freqParameter.s:primate"
@@ -96,7 +96,7 @@
 				</prior>
 				<prior id="Dirichlet" x="@parameters" name="distribution">
 					<distr spec="huelsenbeck.RescaledDirichlet" name="distr">
-						<!-- Use a flat distribution -->
+						<!-- Use a flat, rescaled Dirichlet distribution -->
 						<parameter name="sizes" idref="sizes" />
 					</distr>
 				</prior>
@@ -113,17 +113,17 @@
 							lower="0.0" name="proportionInvariant" upper="1.0" value="0.0" />
 						<substModel id="gtr.s:primate" spec="GTR"><!--eigenSystem="beast.evolution.substitutionmodel.RobustEigenSystem" -->
 							<parameter id="rateAC.s:primate" name="rateAC" spec="Selector"
-								entry="0" parameters="@parameters" groupings="@indices" sizes="@sizes"></parameter>
+								entry="0" parameters="@parameters" groupings="@indices" />
 							<parameter id="rateAG.s:primate" name="rateAG" spec="Selector"
-								entry="1" parameters="@parameters" groupings="@indices" sizes="@sizes"></parameter>
+								entry="1" parameters="@parameters" groupings="@indices" />
 							<parameter id="rateAT.s:primate" name="rateAT" spec="Selector"
-								entry="2" parameters="@parameters" groupings="@indices" sizes="@sizes"></parameter>
+								entry="2" parameters="@parameters" groupings="@indices" />
 							<parameter id="rateCG.s:primate" name="rateCG" spec="Selector"
-								entry="3" parameters="@parameters" groupings="@indices" sizes="@sizes"></parameter>
+								entry="3" parameters="@parameters" groupings="@indices" />
 							<parameter id="rateCT.s:primate" name="rateCT" spec="Selector"
-								entry="4" parameters="@parameters" groupings="@indices" sizes="@sizes"></parameter>
+								entry="4" parameters="@parameters" groupings="@indices" />
 							<parameter id="rateGT.s:primate" name="rateGT" spec="Selector"
-								entry="5" parameters="@parameters" groupings="@indices" sizes="@sizes"></parameter>
+								entry="5" parameters="@parameters" groupings="@indices" />
 							<frequencies frequencies="@freqParameter.s:primate"
 								id="estimatedFreqs.s:primate" spec="Frequencies" />
 						</substModel>
@@ -136,10 +136,7 @@
 				</distribution>
 				<distribution branchRateModel="@StrictClock.c:primate"
 					id="treeLikelihood.noncoding" siteModel="@SiteModel.s:primate"
-					spec="TreeLikelihood" tree="@Tree.t:primate">
-					<data data="@primate-mtDNA" filter="1,458-659,897-898" id="noncoding"
-						spec="FilteredAlignment" />
-				</distribution>
+					spec="TreeLikelihood" tree="@Tree.t:primate" data="@coding" />
 			</distribution>
 		</distribution>
 
@@ -206,7 +203,6 @@
 					lower="0" upper="5">
 					0 1 2 3 4 5
 				</parameter>
-				<parameter name="sizes" idref="sizes" />
 				<parameter name="parameters" idref="parameters" />
 				<parameter name="groupings" idref="indices" />
 			</log>
@@ -214,7 +210,6 @@
 
 		<logger id="independencelog" logEvery="1000" fileName="primate-groupings.log">
 			<log idref="indices" />
-			<log idref="rates" />
 		</logger>
 
 		<logger id="screenlog" logEvery="1000">
@@ -229,6 +224,5 @@
 			<log id="TreeWithMetaDataLogger.t:primate" spec="beast.evolution.tree.TreeWithMetaDataLogger"
 				tree="@Tree.t:primate" />
 		</logger>
-
 	</run>
 </beast>

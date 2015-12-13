@@ -94,7 +94,13 @@ public class Selector extends CalculationNode implements Loggable, Function {
 
 	@Override
 	public double getArrayValue() {
-		return minusOneIsSpecialInput.get().getArrayValue();
+		int index = groupingsInput.get().getNativeValue(
+				entries.getValue());
+		if (index == -1) {
+			return minusOneIsSpecialInput.get().getArrayValue();
+		} else {
+			return parametersInput.get().getValue(index);
+		}
 	}
 
 	@Override
