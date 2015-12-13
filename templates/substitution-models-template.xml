@@ -1,0 +1,70 @@
+<beast version='2.0'
+	namespace='beast.app.beauti:beast.core:beast.evolution.branchratemodel:beast.evolution.speciation:beast.evolution.tree.coalescent:beast.core.util:beast.evolution.nuc:beast.evolution.operators:beast.evolution.sitemodel:beast.evolution.substitutionmodel:beast.evolution.likelihood:beast.evolution:beast.math.distributions'>
+
+	<mergewith point='substModelTemplates'>
+		<!-- Reversible Jump GTR substitution model -->
+		<subtemplate id='RJGTR' class='beast.evolution.substitutionmodel.GTR'
+			mainid='gtr.s:$(n)' suppressInputs='beast.evolution.substitutionmodel.GTR.eigenSystem'>
+			<![CDATA[
+			<plugin spec='GTR' id='rjgtr.s:$(n)'>
+				<parameter id="rateAC.s:$(n)" name="rateAC" spec="Selector"
+					entry="0" parameters="@rates.s:$(n)" groupings="@indices.s:$(n)" />
+				<parameter id="rateAG.s:$(n)" name="rateAG" spec="Selector"
+					entry="1" parameters="@rates.s:$(n)" groupings="@indices:$(n)" />
+				<parameter id="rateAT.s:$(n)" name="rateAT" spec="Selector"
+					entry="2" parameters="@rates.s:$(n)" groupings="@indices:$(n)" />
+				<parameter id="rateCG.s:$(n)" name="rateCG" spec="Selector"
+					entry="3" parameters="@rates.s:$(n)" groupings="@indices:$(n)" />
+				<parameter id="rateCT.s:$(n)" name="rateCT" spec="Selector"
+					entry="4" parameters="@rates.s:$(n)" groupings="@indices:$(n)" />
+				<parameter id="rateGT.s:$(n)" name="rateGT" spec="Selector"
+					entry="5" parameters="@rates.s:$(n)" groupings="@indices:$(n)" />
+				<frequencies id='estimatedFreqs.s:$(n)' spec='Frequencies'>
+					<frequencies id='freqParameter.s:$(n)' spec='parameter.RealParameter'
+						dimension='4' value='0.25' lower='0' upper='1' />
+				</frequencies>
+			</plugin>
+
+			<operator id='FrequenciesExchanger.s:$(n)' spec='DeltaExchangeOperator'
+				delta="0.01" weight="0.1" parameter="@freqParameter.s:$(n)" />
+			<operator id="GTRMerger.s:$(n)" spec="MergeOperator" weight="8"
+				sizes="@rates_count.s:$(n)" groupings="@indices.s:$(n)" parameters="@rates.s:$(n)" />
+			<operator id="GTRSplitter.s:$(n)" spec="SplitOperator"
+				weight="8" sizes="@rates_count.s:$(n)" groupings="@indices.s:$(n)"
+				parameters="@rates.s:$(n)" />
+			<operator delta="0.15" id="RatesExchanger.s:$(n)" spec="DeltaExchangeOperator"
+				weight="5" parameter="@rates.s:$(n)" weightvector="rates_count.s:$(n)" />
+			<stateNode spec="RealParameter" id="rates.s:$(n)" lower="0.0">
+				1 1
+				1 1 1 1
+			</stateNode>
+			<stateNode spec="IntegerParameter" id="indices:$(n)" lower="0"
+				upper="5">
+				0 0 0 0 0 0
+			</stateNode>
+			<stateNode spec="IntegerParameter" id="rates_count.s:$(n)"
+				lower="0" upper="6">
+				6 0 0 0 0 0
+			</stateNode>
+			<prior id="RescaledDirichlet.s:$(n)" x="@rates.s:$(n)" name="distribution">
+				<distr spec="huelsenbeck.RescaledDirichlet" name="distr"
+					sizes="@rates_count.s:$(n)" />
+			</prior>
+			]]>
+
+			<connect srcID='freqParameter.s:$(n)' targetID='state'
+				inputName='stateNode'
+				if='inlikelihood(freqParameter.s:$(n)) and freqParameter.s:$(n)/estimate=true' />
+
+			<connect srcID='FrequenciesExchanger.s:$(n)' targetID='mcmc'
+				inputName='operator'
+				if='inlikelihood(freqParameter.s:$(n)) and freqParameter.s:$(n)/estimate=true'>Exchange values of
+				frequencies of partition s:$(n)
+			</connect>
+
+			<connect srcID='freqParameter.s:$(n)' targetID='tracelog'
+				inputName='log'
+				if='inlikelihood(freqParameter.s:$(n)) and freqParameter.s:$(n)/estimate=true' />
+		</subtemplate>
+	</mergewith>
+</beast>
