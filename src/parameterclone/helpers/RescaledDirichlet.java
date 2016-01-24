@@ -1,4 +1,4 @@
-package huelsenbeck;
+package parameterclone.helpers;
 
 import org.apache.commons.math.distribution.Distribution;
 

@@ -51,7 +51,7 @@
 	<map name="Normal">beast.math.distributions.Normal</map>
 
 
-	<run chainLength="9000000" id="mcmc" spec="MCMC" preBurnin="1000000" sampleFromPrior="True">
+	<run chainLength="9000000" id="mcmc" spec="MCMC" preBurnin="1000000">
 		<state id="state" storeEvery="1000">
 			<tree id="Tree.t:primate" name="stateNode">
 				<taxonset id="TaxonSet.coding" spec="TaxonSet">
@@ -95,7 +95,7 @@
 					<Uniform id="Uniform.0" name="distr" upper="Infinity" />
 				</prior>
 				<prior id="Dirichlet" x="@parameters" name="distribution">
-					<distr spec="huelsenbeck.RescaledDirichlet" name="distr">
+					<distr spec="parameterclone.helpers.RescaledDirichlet" name="distr">
 						<!-- Use a flat, rescaled Dirichlet distribution -->
 						<parameter name="sizes" idref="sizes" />
 					</distr>

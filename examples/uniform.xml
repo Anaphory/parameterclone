@@ -18,7 +18,7 @@
 		<distribution id="posterior" spec="CompoundDistribution">
 			<distribution id="likelihood" spec="CompoundDistribution"/>
 			<distribution id="prior" spec="Prior" x="@parameters">
-				<distr spec="huelsenbeck.RescaledDirichlet">
+				<distr spec="parameterclone.helpers.RescaledDirichlet">
 					<!-- Use a flat distribution -->
 					<parameter name="sizes" idref="sizes" />
 				</distr>

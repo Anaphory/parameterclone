@@ -1,7 +1,7 @@
 package test.parameterclone;
 
-import huelsenbeck.RescaledDirichlet;
 import junit.framework.TestCase;
+import parameterclone.helpers.RescaledDirichlet;
 import parameterclone.splitandmerge.MergeOperator;
 import parameterclone.splitandmerge.SplitOperator;
 import beast.core.Distribution;
