@@ -1,10 +1,12 @@
-<!-- Build parameterclone model -->
-<project basedir="." default="build_jar_all_parameterclone" name="BUILD_parameterclone">
+<!-- Build parameterclone. It is also used by Hudson parameterclone project. JUnit test is available for this build. -->
+<project basedir="." default="addon" name="BUILD_parameterclone">
 	<description>
- 	Build parameterclone.
- 	JUnit test is available for this build.
- 	$Id: build_parameterclone.xml $
- 	</description>
+	    Build parameterclone. 
+            Also used by Hudson parameterclone project. 
+	    JUnit test is available for this build.
+	    $Id: build_parameterclone.xml $
+	</description>
+
 	<!-- set global properties for this build -->
 	<property name="srcparameterclone" location="src" />
 	<property name="buildparameterclone" location="build" />
@@ -15,48 +17,73 @@
 	<property name="libBeast2" location="${beast2path}/lib" />
 	<property name="srcBeast2" location="${beast2path}/src" />
 	<property name="beast2classpath" location="${beast2path}/build" />
-	<property name="Add_on_dir" value="${release_dir}/package" />
-	<import file="${beast2path}/build.xml" />
+	<property name="Add_on_dir" value="${release_dir}/add-on" />
+	<property name="version" value="1.1.1" />
+
+    <import file="${beast2path}/build.xml" />
+
 	<property name="main_class_BEAST" value="beast.app.BeastMCMC" />
-	<property name="report" value="${buildparameterclone}/junitreport" />
+	<property name="report" value="${buildparameterclone}/junitreport"/>
+
 	<path id="classpath">
-		<pathelement path="${buildparameterclone}" />
-		<fileset dir="${libBeast2}" includes="junit-4.8.2.jar" />
-		<pathelement path="${beast2classpath}" />
+        <pathelement path="${buildparameterclone}"/>
+		<fileset dir="${libBeast2}" includes="junit-4.8.2.jar"/>
+		<fileset dir="${libBeast2}" includes="jam.jar"/>
+		<fileset dir="${libBeast2}" includes="beagle.jar"/>
+        <pathelement path="${beast2classpath}"/>
 	</path>
+
 	<!-- start -->
 	<target name="initparameterclone">
 		<echo message="${ant.project.name}: ${ant.file}" />
 	</target>
+
 	<target name="cleanparameterclone">
-		<delete dir="${buildparameterclone}" />
+    	<delete dir="${buildparameterclone}" />
 	</target>
 
 	<!-- clean previous build, and then compile Java source code, and Juint test -->
-	<target name="build_all_parameterclone" depends="cleanparameterclone,compile-allparameterclone,junitparameterclone" description="Clean and Build all run-time stuff">
+	<target name="build_all_parameterclone" depends="cleanparameterclone,compile-allparameterclone,junitparameterclone"
+        description="Clean and Build all run-time stuff">
 	</target>
 
 	<!-- clean previous build, compile Java source code, and Junit test, and make the beast.jar and beauti.jar -->
-	<target name="build_jar_all_parameterclone" depends="cleanparameterclone,compile-allparameterclone,junitparameterclone,dist_all_parameterclone" description="Clean and Build all run-time stuff">
+	<target name="build_jar_all_parameterclone" depends="cleanparameterclone,compile-allparameterclone,junitparameterclone,dist_all_parameterclone"
+        description="Clean and Build all run-time stuff">
 	</target>
 
+
 	<!-- No JUnit Test, clean previous build, compile Java source code, and make the parameterclone.jar and beauti.jar -->
-	<target name="build_jar_all_parameterclone_NoJUnitTest" depends="cleanparameterclone,compile-allparameterclone,dist_all_parameterclone" description="Clean and Build all run-time stuff">
+	<target name="build_jar_all_parameterclone_NoJUnitTest" depends="cleanparameterclone,compile-allparameterclone,dist_all_parameterclone"
+        description="Clean and Build all run-time stuff">
 	</target>
 
 	<!-- compile Java source code -->
 	<target name="compile-allparameterclone" depends="initparameterclone,compile-all">
-		<!-- Capture the path as a delimited property using the refid attribute -->
-		<property name="myclasspath" refid="classpath" />
-		<!-- Emit the property to the ant console -->
-		<echo message="Classpath = ${myclasspath}" />
+
+
+	    <!-- Capture the path as a delimited property using the refid attribute -->
+	    <property name="myclasspath" refid="classpath"/>
+	    <!-- Emit the property to the ant console -->
+	    <echo message="Classpath = ${myclasspath}"/>
+
 		<mkdir dir="${buildparameterclone}" />
+
 		<!-- Compile the java code from ${srcparameterclone} into ${buildparameterclone} /bin -->
-		<javac srcdir="${srcparameterclone}" destdir="${buildparameterclone}" classpathref="classpath" fork="true" memoryinitialsize="256m" memorymaximumsize="256m">
-			<include name="beast/**/**" />
+		<javac srcdir="${srcparameterclone}" destdir="${buildparameterclone}" classpathref="classpath" 
+		       fork="true"
+		       memoryinitialsize="256m"
+		       memorymaximumsize="256m"
+			   source="1.8"
+		       target="1.8">
+			<include name="**/**" />
 			<!-- compile JUnit test classes -->
-			<include name="test/beast/**" />
+			<include name="test/**" />
 		</javac>
+		<copy todir="${buildparameterclone}">
+			<fileset dir="${srcparameterclone}" includes="**/*.properties" />
+			<fileset dir="${srcparameterclone}" includes="**/*.png" />
+		</copy>
 		<echo message="Successfully compiled." />
 	</target>
 
@@ -64,6 +91,7 @@
 	<target name="dist_all_parameterclone" depends="compile-allparameterclone" description="create parameterclone jar">
 		<!-- Create the distribution directory -->
 		<mkdir dir="${distparameterclone}" />
+
 		<!-- Put everything in ${buildparameterclone} into the beast.jar file -->
 		<jar jarfile="${distparameterclone}/parameterclone.jar">
 			<manifest>
@@ -71,7 +99,7 @@
 				<attribute name="Main-Class" value="${main_class_BEAST}" />
 			</manifest>
 			<fileset dir="${buildparameterclone}">
-				<include name="beast/**/*.class" />
+				<include name="**/*.class" />
 			</fileset>
 			<fileset dir="${beast2classpath}">
 				<include name="beast/**/*.class" />
@@ -83,18 +111,18 @@
 		</jar>
 		<jar jarfile="${distparameterclone}/parameterclone.src.jar">
 			<fileset dir="${srcparameterclone}">
-				<include name="beast/**/*.java" />
-				<include name="beast/**/*.png" />
-				<include name="beast/**/*.xsl" />
+				<include name="**/*.java" />
+				<include name="**/*.png" />
+				<include name="**/*.xsl" />
 			</fileset>
-		</jar>
-		<jar jarfile="${dist}/parameterclone.addon.jar">
+        </jar>
+		<jar jarfile="${distparameterclone}/parameterclone.addon.jar">
 			<manifest>
 				<attribute name="Built-By" value="${user.name}" />
 			</manifest>
 			<fileset dir="${buildparameterclone}">
-				<include name="beast/**/*.class" />
-				<include name="util/**/*.class" />
+				<include name="**/*.png" />
+				<include name="**/*.class" />
 				<include name="**/*.properties" />
 			</fileset>
 		</jar>
@@ -105,55 +133,80 @@
 		<java jar="${distparameterclone}/parameterclone.jar" fork="true" />
 	</target>
 
+	
 	<!-- JUnit test -->
 	<target name="junitparameterclone">
 		<mkdir dir="${report}" />
-		<junit printsummary="yes">
-			<!--showoutput='yes'-->
+		<junit printsummary="yes"> <!--showoutput='yes'-->
 			<classpath>
 				<path refid="classpath" />
 				<path location="${buildparameterclone}" />
 			</classpath>
+
 			<formatter type="xml" />
+
 			<batchtest fork="yes" todir="${report}">
 				<fileset dir="${srcparameterclone}">
-					<include name="test/**/*Test.java" />
+                    <include name="test/**/*Test.java"/>                                         
 				</fileset>
 				<fileset dir="${srcBeast2}">
-					<include name="test/beast/integration/**/*Test.java" />
-					<exclude name="test/beast/integration/**/ResumeTest.java" />
+                    <include name="test/beast/integration/**/*Test.java"/>                                         
+                    <exclude name="test/beast/integration/**/ResumeTest.java"/>                                         
 				</fileset>
 			</batchtest>
 		</junit>
 		<echo message="JUnit test finished." />
 	</target>
-	<target name="junitreport">
+    
+    <target name="junitreport">
 		<junitreport todir="${report}">
-			<fileset dir="${report}" includes="*.xml" />
-			<report format="frames" todir="${report}" />
+			<fileset dir="${report}" includes="*.xml"/>
+			<report format="frames" todir="${report}"/>
 		</junitreport>
 		<echo message="JUnit test report finished." />
 	</target>
-	<target name="addon" depends="build_jar_all_parameterclone_NoJUnitTest" description="release BEAST 2 package version of parameterclone">
+
+
+	<target name="addon"
+	        depends="build_jar_all_parameterclone_NoJUnitTest"
+	        description="release BEAST 2 add-on version of parameterclone">
+
 		<delete dir="${Add_on_dir}" />
 		<!-- Create the release directory -->
 		<mkdir dir="${Add_on_dir}" />
+		<mkdir dir="${Add_on_dir}/doc" />
 		<mkdir dir="${Add_on_dir}/lib" />
+		<mkdir dir="${Add_on_dir}/examples" />
 		<mkdir dir="${Add_on_dir}/templates" />
+
+		<copy todir="${Add_on_dir}">
+			<fileset file="version.xml"/>
+		</copy>
+		<copy todir="${Add_on_dir}/examples">
+			<fileset dir="examples" />
+		</copy>
+		<copy todir="${Add_on_dir}/doc">
+			<fileset file="doc/readme.txt"/>
+		</copy>
 		<copy todir="${Add_on_dir}/lib">
-			<fileset dir="${dist}" includes="parameterclone.addon.jar" />
+			<fileset dir="${distparameterclone}" includes="parameterclone.addon.jar" />
 		</copy>
 		<copy todir="${Add_on_dir}">
-			<fileset dir="${dist}" includes="parameterclone.src.jar" />
+			<fileset dir="${distparameterclone}" includes="parameterclone.src.jar" />
 		</copy>
+		<!--
 		<copy todir="${Add_on_dir}/templates">
 			<fileset file="templates/parameterclone.xml" />
+			<fileset file="templates/AutoPartition.xml" />
 		</copy>
-		<jar jarfile="${dist}/parameterclone.addon.zip">
+		-->
+
+		<jar jarfile="${distparameterclone}/parameterclone.addon.v${version}.zip">
 			<fileset dir="${Add_on_dir}">
 				<include name="**/*" />
 			</fileset>
-		</jar>
-		<echo message="Package version release is finished." />
+        </jar>
+		<echo message="Add-on version v${version} release is finished." />
 	</target>
+
 </project>
