@@ -15,17 +15,17 @@ public class SelectorSet extends Selector {
 			"sizes", "stores how many indices are pointing to each parameter",
 			Validate.REQUIRED);
 	
-	@Override
-	public int getDimension() {
-		int dim = 0;
-		Integer[] sizes = sizesInput.get().getValues();
-		for (int i = 0; i<maxIndex; ++i){
-			if (sizes[i] > 0) {
-				++dim;
-			}
-		}
-		return dim;
-	}
+//	@Override
+//	public int getDimension() {
+//		int dim = 0;
+//		Integer[] sizes = sizesInput.get().getValues();
+//		for (int i = 0; i<maxIndex; ++i){
+//			if (sizes[i] > 0) {
+//				++dim;
+//			}
+//		}
+//		return dim;
+//	}
 	
 	@Override
 	public double getArrayValue() {
