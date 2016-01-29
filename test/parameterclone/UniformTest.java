@@ -1,4 +1,4 @@
-package test.parameterclone;
+package parameterclone;
 
 import junit.framework.TestCase;
 import parameterclone.helpers.RescaledDirichlet;
