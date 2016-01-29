@@ -41,9 +41,7 @@ public class Selector extends CalculationNode implements Loggable, Function {
 	final public Input<IntegerParameter> entryInput = new Input<IntegerParameter>(
 			"entry",
 			"The index of the parameter vector that this object propagates",
-			// TODO: This should be made optional, defaulting to
-			// 0..parameters.getDimension()
-			Validate.REQUIRED);
+			(IntegerParameter) null);
 	public Input<RealParameter> parametersInput = new Input<RealParameter>(
 			"parameters",
 			"individual parameters that the actual value is chosen from",
@@ -61,8 +59,12 @@ public class Selector extends CalculationNode implements Loggable, Function {
 	@Override
 	public void initAndValidate() throws Exception {
 		maxIndex = parametersInput.get().getDimension();
-		if (entryInput == null) {
-			// fill it with 0..maxIndex-1
+		if (entryInput.get() == null) {
+			Integer[] build_entries = new Integer[maxIndex];
+			for (int i=0; i<maxIndex; ++i) {
+				build_entries[i] = i;
+			}
+			entries = new IntegerParameter(build_entries);
 		} else {
 			entries = entryInput.get();
 			for (Integer entry : entries.getValues()) {
