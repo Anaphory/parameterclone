@@ -37,8 +37,6 @@ public class RescaledDirichlet extends ParametricDistribution {
 
 	@Override
 	public void initAndValidate() throws Exception {
-		// TODO Auto-generated method stub
-
 	}
 
 	@Override
