@@ -53,5 +53,6 @@ public class UniformTest extends TestCase {
 				"distribution", prior, "operator", merger, "operator", splitter);
 
 		mcmc.run();
+		throw new RuntimeException("The core of this test remains unimplemented");
 	}
 }
