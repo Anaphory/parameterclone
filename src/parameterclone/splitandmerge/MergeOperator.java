@@ -50,19 +50,19 @@ public class MergeOperator extends Operator {
 	Integer maxIndex;
 
 	@Override
-	public void initAndValidate() throws Exception {
+	public void initAndValidate() {
 		maxIndex = parametersInput.get().getDimension();
 		// Array-like RealParameters do not implement java.lang.iterable, so we
 		// must do the iteration by hand.
 		for (int groupIndex = groupingsInput.get().getDimension() - 1; groupIndex >= 0; --groupIndex) {
 			if (groupingsInput.get().getNativeValue(groupIndex) >= maxIndex) {
-				throw new Exception(
+				throw new RuntimeException(
 						"All entries in groupings must be valid indices of parameters");
 			}
 		}
 		if (sizesInput.get().getDimension() != parametersInput.get()
 				.getDimension()) {
-			throw new Exception(
+			throw new RuntimeException(
 					"sizes must correspond to parameters in dimension");
 		}
 	}

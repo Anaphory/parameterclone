@@ -18,7 +18,7 @@ public class RescaledDirichlet extends ParametricDistribution {
 			"sizes", "stores how many indices are pointing to each x");
 
 	@Override
-	public double calcLogP(Function pX) throws Exception {
+	public double calcLogP(Function pX) {
 		double fLogP = 0;
 		int K = 0;
 		int N = 0;
@@ -36,7 +36,7 @@ public class RescaledDirichlet extends ParametricDistribution {
 	}
 
 	@Override
-	public void initAndValidate() throws Exception {
+	public void initAndValidate() {
 	}
 
 	@Override

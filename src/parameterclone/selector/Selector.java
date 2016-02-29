@@ -57,8 +57,12 @@ public class Selector extends CalculationNode implements Loggable, Function {
 	protected Integer maxIndex;
 
 	@Override
-	public void initAndValidate() throws Exception {
-		maxIndex = parametersInput.get().getDimension();
+	public void initAndValidate() {
+		try {
+			maxIndex = parametersInput.get().getDimension();
+		} catch (NullPointerException e) {
+			throw new IllegalArgumentException("parameters was left unspecified");
+		}
 		if (entryInput.get() == null) {
 			Integer[] build_entries = new Integer[maxIndex];
 			for (int i=0; i<maxIndex; ++i) {
@@ -69,7 +73,7 @@ public class Selector extends CalculationNode implements Loggable, Function {
 			entries = entryInput.get();
 			for (Integer entry : entries.getValues()) {
 				if (entry > groupingsInput.get().getDimension()) {
-					throw new Exception(
+					throw new RuntimeException(
 							"entries must be valid index of groupings");
 				}
 			}
@@ -78,7 +82,7 @@ public class Selector extends CalculationNode implements Loggable, Function {
 		// must do the iteration by hand.
 		for (int groupIndex = groupingsInput.get().getDimension() - 1; groupIndex >= 0; --groupIndex) {
 			if (groupingsInput.get().getNativeValue(groupIndex) >= maxIndex) {
-				throw new Exception(
+				throw new RuntimeException(
 						"All entries in groupings must be valid indices of parameters");
 			}
 		}
@@ -121,7 +125,7 @@ public class Selector extends CalculationNode implements Loggable, Function {
 	 */
 
 	@Override
-	public void init(final PrintStream out) throws Exception {
+	public void init(final PrintStream out) {
 		for (int i = 0; i < getDimension(); ++i) {
 			out.print(getID() + "" + i + "\t");
 		}
